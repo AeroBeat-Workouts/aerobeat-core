@@ -377,7 +377,7 @@ func _get_provider_id(provider: AeroInputProvider) -> String:
 	# Use class_name if available, otherwise fall back to instance ID
 	var script := provider.get_script()
 	if script != null and script is GDScript:
-		var global_name := script.get_global_name()
+		var global_name: String = script.get_global_name()
 		if global_name != "":
 			return global_name.to_snake_case()
 	
