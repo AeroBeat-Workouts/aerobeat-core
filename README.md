@@ -90,8 +90,27 @@ Flow also shares the same state-like movement style for obstacle/body intents:
 - `FlowInput` contract for camera-first Flow gameplay intents
 - `BoxingInput` contract for camera-first Boxing gameplay intents
 - `InputManager` runtime coordinator that prefers camera providers as the official default path and proxies the gameplay-facing intent surface
+- `AeroProviderSessionRegistry` shared in-process seam for publishing, requesting, and reusing already-active provider sessions with explicit owner/borrower semantics
 - `src/ui/` normalized UI interaction contract for screen-space, hybrid 3D GUI, and future XR-facing UI input
 - Hidden `.testbed/` Godot workbench for manual inspection and GUT-based validation
+
+## Shared provider/session reuse seam v1
+
+This repo now also includes a small shared runtime seam for downstream repos that need to reuse an already-active provider session instead of spawning a duplicate copy.
+
+Key truths:
+
+- the seam is **in-process only** (same Godot runtime)
+- the **owner** of the live provider publishes it explicitly
+- **consumers** request and acquire borrower slots explicitly
+- borrower reuse does **not** transfer lifecycle ownership
+- the registry is intentionally repo-agnostic and does **not** auto-start providers
+
+Key files:
+
+- `src/runtime/provider_session_registry.gd`
+- `docs/provider-session-registry-v1.md`
+- `.testbed/tests/unit/test_provider_session_registry.gd`
 
 ## UI interaction contract v1
 
