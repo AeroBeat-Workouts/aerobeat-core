@@ -66,6 +66,8 @@ signal tracking_updated(
 	right_foot_transform: Transform3D
 )
 
+signal camera_devices_changed(devices: Array, selected_device_id: String)
+
 # ============================================================================
 # SIGNALS: BOXING GAMEPLAY INTENTS (Proxied from active provider)
 # ============================================================================
@@ -235,6 +237,30 @@ func stop_active_provider() -> void:
 		_active_provider.stop()
 		_active_provider = null
 
+## Return the active provider's available camera devices.
+func get_active_provider_camera_devices() -> Array:
+	if _active_provider == null:
+		return []
+	return _active_provider.get_available_camera_devices()
+
+## Return the active provider's selected camera-device identity.
+func get_active_provider_selected_camera_device_id() -> String:
+	if _active_provider == null:
+		return ""
+	return _active_provider.get_selected_camera_device_id()
+
+## Update the cached camera selection for a registered provider.
+func set_provider_selected_camera_device_id(provider_id: String, device_id: String) -> bool:
+	if not _providers.has(provider_id):
+		return false
+	var provider: AeroInputProvider = _providers[provider_id]
+	var settings: Dictionary = _provider_settings.get(provider_id, {}).duplicate(true)
+	settings["selected_camera_device_id"] = device_id
+	settings["camera_source"] = device_id
+	_provider_settings[provider_id] = settings
+	return provider.set_selected_camera_device_id(device_id)
+
+
 # ============================================================================
 # PUBLIC API: CAPABILITY CHECKS
 # ============================================================================
@@ -267,6 +293,10 @@ func _connect_provider_signals(provider: AeroInputProvider) -> void:
 	
 	provider.tracking_updated.connect(
 		func(h, lh, rh, lf, rf): tracking_updated.emit(h, lh, rh, lf, rf)
+	)
+	provider.camera_devices_changed.connect(func(devices, selected_device_id):
+		if provider == _active_provider:
+			camera_devices_changed.emit(devices, selected_device_id)
 	)
 	
 	if provider.has_signal("punch_left"):
@@ -415,3 +445,4 @@ func _exit_tree() -> void:
 	
 	_providers.clear()
 	_provider_settings.clear()
+

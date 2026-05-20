@@ -79,6 +79,9 @@ signal tracking_updated(
 	right_foot_transform: Transform3D
 )
 
+## Emitted when the provider refreshes its available camera-device list or selected camera identity.
+signal camera_devices_changed(devices: Array, selected_device_id: String)
+
 # ============================================================================
 # COMMANDS (Call these to control the provider)
 # ============================================================================
@@ -116,6 +119,21 @@ func get_provider_id() -> String:
 ## @param capability: The Capability enum value to check.
 func has_capability(capability: Capability) -> bool:
 	push_error("AeroInputProvider: has_capability() must be overridden")
+	return false
+
+## Return the currently available camera devices for this provider.
+## Each entry should expose a stable `id` plus any optional display metadata the provider can supply.
+func get_available_camera_devices() -> Array:
+	return []
+
+## Return the currently selected camera-device identity for this provider.
+## Providers should prefer a stable identifier over an implicit numeric default when possible.
+func get_selected_camera_device_id() -> String:
+	return ""
+
+## Set the selected camera-device identity for this provider.
+## Providers may defer the actual hardware swap until the next start if hot-swap is not supported.
+func set_selected_camera_device_id(_device_id: String) -> bool:
 	return false
 
 ## Trigger haptics for feedback when supported.

@@ -183,3 +183,10 @@ func _get_signal_info(target: Object, signal_name: String) -> Dictionary:
 		if String(signal_info["name"]) == signal_name:
 			return signal_info
 	return {}
+
+
+func test_camera_device_contract_defaults() -> void:
+	var provider := AeroInputProvider.new()
+	assert_eq(provider.get_available_camera_devices(), [])
+	assert_eq(provider.get_selected_camera_device_id(), "")
+	assert_false(provider.set_selected_camera_device_id("/dev/video2"))
