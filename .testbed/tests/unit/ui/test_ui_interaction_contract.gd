@@ -108,6 +108,164 @@ func test_screen_ui_input_adapter_publishes_press_and_drag_phases_for_mouse() ->
 		AeroUiInteractionTypes.PHASE_PRESS_END
 	])
 
+func test_screen_ui_input_adapter_clears_hover_when_host_explicitly_transitions_target_to_none() -> void:
+	var root: Control = add_child_autoqfree(Control.new())
+	root.size = Vector2(400, 300)
+
+	var bus: AeroUiInteractionBus = autofree(AeroUiInteractionBus.new())
+	bus.name = "Bus"
+	root.add_child(bus)
+
+	var target := Control.new()
+	target.position = Vector2(20, 20)
+	target.size = Vector2(120, 48)
+	root.add_child(target)
+
+	var adapter: ScreenUiInputAdapter = autofree(ScreenUiInputAdapter.new())
+	adapter.bus_path = NodePath("../../Bus")
+	target.add_child(adapter)
+
+	await wait_process_frames(1)
+
+	var phases: Array[StringName] = []
+	var target_paths: Array[NodePath] = []
+	bus.interaction_event.connect(func(event: AeroUiInteractionEvent):
+		phases.append(event.phase)
+		target_paths.append(event.target_path)
+	)
+
+	var hover_inside := InputEventMouseMotion.new()
+	hover_inside.position = Vector2(40, 32)
+	hover_inside.relative = Vector2.ZERO
+	assert_true(adapter.publish_input_event(
+		hover_inside,
+		target.get_path(),
+		{"respect_empty_target_path": true}
+	))
+
+	var hover_outside := InputEventMouseMotion.new()
+	hover_outside.position = Vector2(220, 180)
+	hover_outside.relative = Vector2(180, 148)
+	assert_true(adapter.publish_input_event(
+		hover_outside,
+		NodePath(),
+		{"respect_empty_target_path": true, "inside_window_exit": true}
+	))
+
+	assert_eq(phases, [
+		AeroUiInteractionTypes.PHASE_HOVER_ENTER,
+		AeroUiInteractionTypes.PHASE_HOVER_EXIT,
+	])
+	assert_eq(target_paths, [
+		target.get_path(),
+		target.get_path(),
+	])
+	assert_false(bool(adapter._pointer_states[adapter._hover_pointer_id].get("hovering", true)))
+	assert_eq(adapter._pointer_states[adapter._hover_pointer_id].get("hover_target_path", target.get_path()), NodePath())
+
+func test_screen_ui_input_adapter_preserves_mouse_press_owner_on_off_target_release() -> void:
+	var root: Control = add_child_autoqfree(Control.new())
+	root.size = Vector2(400, 300)
+
+	var bus: AeroUiInteractionBus = autofree(AeroUiInteractionBus.new())
+	bus.name = "Bus"
+	root.add_child(bus)
+
+	var target := Control.new()
+	target.position = Vector2(20, 20)
+	target.size = Vector2(120, 48)
+	root.add_child(target)
+
+	var adapter: ScreenUiInputAdapter = autofree(ScreenUiInputAdapter.new())
+	adapter.bus_path = NodePath("../../Bus")
+	target.add_child(adapter)
+
+	await wait_process_frames(1)
+
+	var events: Array[AeroUiInteractionEvent] = []
+	bus.interaction_event.connect(func(event: AeroUiInteractionEvent): events.append(event))
+
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = Vector2(40, 32)
+	assert_true(adapter.publish_input_event(
+		press,
+		target.get_path(),
+		{"respect_empty_target_path": true, "target_resolution": "native_control_bridge"}
+	))
+
+	var release := InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = Vector2(220, 180)
+	assert_true(adapter.publish_input_event(
+		release,
+		NodePath(),
+		{"respect_empty_target_path": true, "inside_window_exit": true, "target_resolution": "native_control_bridge"}
+	))
+
+	assert_eq(events.size(), 2)
+	assert_eq(events[0].phase, AeroUiInteractionTypes.PHASE_PRESS_BEGIN)
+	assert_eq(events[0].target_path, target.get_path())
+	assert_eq(events[1].phase, AeroUiInteractionTypes.PHASE_PRESS_END)
+	assert_eq(events[1].target_path, target.get_path())
+	assert_true(bool(events[1].raw_metadata.get("off_surface_continuation", false)))
+	assert_eq(str(events[1].raw_metadata.get("published_target_path", "")), str(target.get_path()))
+	assert_eq(str(events[1].raw_metadata.get("owner_target_path", "")), str(target.get_path()))
+	assert_eq(adapter._pointer_states[adapter._hover_pointer_id].get("owner_target_path", target.get_path()), NodePath())
+
+func test_screen_ui_input_adapter_preserves_touch_press_owner_on_off_target_release() -> void:
+	var root: Control = add_child_autoqfree(Control.new())
+	root.size = Vector2(400, 300)
+
+	var bus: AeroUiInteractionBus = autofree(AeroUiInteractionBus.new())
+	bus.name = "Bus"
+	root.add_child(bus)
+
+	var target := Control.new()
+	target.position = Vector2(20, 20)
+	target.size = Vector2(120, 48)
+	root.add_child(target)
+
+	var adapter: ScreenUiInputAdapter = autofree(ScreenUiInputAdapter.new())
+	adapter.bus_path = NodePath("../../Bus")
+	target.add_child(adapter)
+
+	await wait_process_frames(1)
+
+	var events: Array[AeroUiInteractionEvent] = []
+	bus.interaction_event.connect(func(event: AeroUiInteractionEvent): events.append(event))
+
+	var press := InputEventScreenTouch.new()
+	press.index = 0
+	press.pressed = true
+	press.position = Vector2(40, 32)
+	assert_true(adapter.publish_input_event(
+		press,
+		target.get_path(),
+		{"respect_empty_target_path": true, "target_resolution": "native_control_bridge"}
+	))
+
+	var release := InputEventScreenTouch.new()
+	release.index = 0
+	release.pressed = false
+	release.position = Vector2(220, 180)
+	assert_true(adapter.publish_input_event(
+		release,
+		NodePath(),
+		{"respect_empty_target_path": true, "inside_window_exit": true, "target_resolution": "native_control_bridge"}
+	))
+
+	assert_eq(events.size(), 2)
+	assert_eq(events[0].phase, AeroUiInteractionTypes.PHASE_PRESS_BEGIN)
+	assert_eq(events[0].target_path, target.get_path())
+	assert_eq(events[1].phase, AeroUiInteractionTypes.PHASE_PRESS_END)
+	assert_eq(events[1].target_path, target.get_path())
+	assert_true(bool(events[1].raw_metadata.get("off_surface_continuation", false)))
+	assert_eq(str(events[1].raw_metadata.get("published_target_path", "")), str(target.get_path()))
+	assert_eq(str(events[1].raw_metadata.get("owner_target_path", "")), str(target.get_path()))
+
 func test_hybrid_and_xr_adapters_keep_future_ready_surface_and_source_shapes() -> void:
 	var root: Node = add_child_autoqfree(Node.new())
 	var bus: AeroUiInteractionBus = autofree(AeroUiInteractionBus.new())
