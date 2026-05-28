@@ -5,7 +5,7 @@ extends Node2D
 @onready var status_label: Label = $CanvasLayer/Panel/MarginContainer/VBoxContainer/StatusLabel
 @onready var class_list: Label = $CanvasLayer/Panel/MarginContainer/VBoxContainer/ClassList
 
-const INTERFACE_PATH = "res://src/interfaces/input_provider.gd"
+const INTERFACE_PATH = "res://addons/aerobeat-input-core/src/interfaces/input_provider.gd"
 
 func _ready():
 	print("=== AeroBeat Input Core Test Scene ===")
