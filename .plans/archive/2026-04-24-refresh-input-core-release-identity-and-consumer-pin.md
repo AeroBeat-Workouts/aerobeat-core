@@ -1,7 +1,7 @@
 # AeroBeat Input Core Release Identity Refresh and Consumer Pin Update
 
 **Date:** 2026-04-24  
-**Status:** In Progress  
+**Status:** Stale  
 **Agent:** Pico 🐱‍🏍
 
 ---

@@ -1,7 +1,7 @@
 # AeroBeat Input Core — UI Input Abstraction Contract
 
 **Date:** 2026-05-15  
-**Status:** Draft  
+**Status:** Stale  
 **Agent:** Byte 🐈‍⬛
 
 ---

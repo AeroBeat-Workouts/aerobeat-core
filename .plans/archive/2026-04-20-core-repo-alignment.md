@@ -1,7 +1,7 @@
 # AeroBeat Core Repo Alignment
 
 **Date:** 2026-04-20  
-**Status:** In Progress  
+**Status:** Stale  
 **Agent:** Chip 🐱‍💻
 
 ---

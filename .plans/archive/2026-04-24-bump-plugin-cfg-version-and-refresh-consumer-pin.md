@@ -1,7 +1,7 @@
 # AeroBeat Input Core Bump plugin.cfg Version and Refresh Consumer Pin
 
 **Date:** 2026-04-24  
-**Status:** In Progress  
+**Status:** Stale  
 **Agent:** Pico 🐱‍🏍
 
 ---
