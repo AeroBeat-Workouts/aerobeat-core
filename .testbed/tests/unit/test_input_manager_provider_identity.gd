@@ -109,13 +109,13 @@ func test_priority_selection_prefers_explicit_provider_id_over_class_name() -> v
 	assert_true(manager.register_provider(preferred_provider))
 	assert_eq(manager.get_active_provider(), preferred_provider)
 
-func test_registry_compatibly_resolves_legacy_mediapipe_provider_lookup_to_camera_tracking() -> void:
+func test_registry_does_not_resolve_legacy_mediapipe_provider_lookup_after_clean_break() -> void:
 	var provider: FakeProvider = add_child_autoqfree(FakeProvider.new("camera_tracking"))
 	var publish := AeroProviderSessionRegistry.publish_session("camera_tracking_owner", provider, {"session_key": "camera_tracking/shared"})
 	assert_true(bool(publish.get("ok", false)))
 	var by_provider := AeroProviderSessionRegistry.request_session({"provider_id": "mediapipe_python"})
-	assert_true(bool(by_provider.get("ok", false)))
-	assert_eq(String(by_provider.get("session", {}).get("provider_id", "")), "camera_tracking")
+	assert_false(bool(by_provider.get("ok", false)))
+	assert_eq(String(by_provider.get("status", "")), AeroProviderSessionRegistry.STATUS_MISSING)
 	var by_session_key := AeroProviderSessionRegistry.request_session({"session_key": "mediapipe_python/shared"})
-	assert_true(bool(by_session_key.get("ok", false)))
-	assert_eq(String(by_session_key.get("session", {}).get("session_key", "")), "camera_tracking/shared")
+	assert_false(bool(by_session_key.get("ok", false)))
+	assert_eq(String(by_session_key.get("status", "")), AeroProviderSessionRegistry.STATUS_MISSING)

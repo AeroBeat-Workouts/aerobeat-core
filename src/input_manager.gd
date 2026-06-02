@@ -25,7 +25,6 @@ extends Node
 ## so the runtime policy does not imply broad current gameplay parity.
 @export var input_priority: Array[String] = [
 	"camera_tracking",      # Preferred v1 desktop camera gameplay path
-	"mediapipe_python",     # Temporary compatibility fallback during de-MediaPipe migration
 	"mediapipe_native",     # Preferred v1 mobile/native camera gameplay path
 	"xr_6dof",              # Future / experimental richer provider path
 	"joycon_hid",           # Future / experimental non-camera gameplay path

@@ -34,10 +34,6 @@ const _KNOWN_CAPABILITIES := [
 	AeroInputProvider.Capability.VELOCITY,
 ]
 
-const _LEGACY_PROVIDER_LOOKUP_ALIASES := {
-	"mediapipe_python": "camera_tracking",
-}
-
 static var _sessions: Dictionary = {}
 
 ## Publish or refresh a live provider session owned by one lane/repo.
@@ -316,20 +312,10 @@ static func _lookup_session_keys(session_key: String) -> Array[String]:
 	var normalized_session_key := String(session_key).strip_edges()
 	if normalized_session_key.is_empty():
 		return []
-	var keys: Array[String] = [normalized_session_key]
-	var slash_index := normalized_session_key.find("/")
-	var root := normalized_session_key if slash_index < 0 else normalized_session_key.substr(0, slash_index)
-	var suffix := "" if slash_index < 0 else normalized_session_key.substr(slash_index)
-	var normalized_root := _normalize_provider_lookup_id(root)
-	if normalized_root != root:
-		keys.append("%s%s" % [normalized_root, suffix])
-	return keys
+	return [normalized_session_key]
 
 static func _normalize_provider_lookup_id(provider_id_variant: Variant) -> String:
-	var provider_id := String(provider_id_variant).strip_edges().to_snake_case()
-	if _LEGACY_PROVIDER_LOOKUP_ALIASES.has(provider_id):
-		return String(_LEGACY_PROVIDER_LOOKUP_ALIASES[provider_id])
-	return provider_id
+	return String(provider_id_variant).strip_edges().to_snake_case()
 
 static func _session_matches_request(record: Dictionary, request: Dictionary) -> bool:
 	var owner_filter := String(request.get("owner_id", "")).strip_edges()
