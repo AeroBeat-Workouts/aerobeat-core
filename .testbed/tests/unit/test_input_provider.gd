@@ -1,4 +1,4 @@
-extends "res://addons/gut/test.gd"
+extends "res://addons/aerobeat-vendor-godot-unit-test/test.gd"
 
 func test_aero_input_provider_default_left_hand_position_is_zero_vector():
 	var provider = autofree(AeroInputProvider.new())

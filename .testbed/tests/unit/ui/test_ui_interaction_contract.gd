@@ -1,4 +1,4 @@
-extends "res://addons/gut/test.gd"
+extends "res://addons/aerobeat-vendor-godot-unit-test/test.gd"
 
 func test_ui_interaction_types_keep_canonical_phase_only_contract_values_stable() -> void:
 	assert_true(AeroUiInteractionTypes.PHASES.has(&"hover_enter"))

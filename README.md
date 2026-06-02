@@ -173,7 +173,7 @@ The testbed uses tracked relative links so the hidden workbench can see the repo
 
 ### Validation notes
 
-- The repo's GUT dependency is declared in `.testbed/addons.jsonc` and points at the repo's `/addons/gut` package subfolder.
+- The repo's GUT dependency is declared in `.testbed/addons.jsonc` and points at the repo's `/aerobeat-vendor-godot-unit-test` package path.
 - Repo-local unit tests live under `.testbed/tests/`, while the manual workbench scene content lives under `.testbed/scenes/`.
 - Downstream repos should consume tagged releases of `aerobeat-input-core` in `tag` mode.
 - Validation should keep the camera-first, intent-first v1 framing intact while ensuring future-facing non-camera abstractions remain explicitly optional.
