@@ -90,21 +90,32 @@ func test_base_provider_id_defaults_to_global_name_snake_case() -> void:
 func test_registers_provider_under_explicit_provider_id() -> void:
 	var manager: InputManager = add_child_autoqfree(InputManager.new())
 	manager.auto_switch_inputs = false
-	var provider: FakeProvider = add_child_autoqfree(FakeProvider.new("mediapipe_python"))
+	var provider: FakeProvider = add_child_autoqfree(FakeProvider.new("camera_tracking"))
 
 	assert_true(manager.register_provider(provider))
-	assert_true(manager.get_registered_providers().has("mediapipe_python"))
-	assert_eq(manager.get_provider("mediapipe_python"), provider)
+	assert_true(manager.get_registered_providers().has("camera_tracking"))
+	assert_eq(manager.get_provider("camera_tracking"), provider)
 
 func test_priority_selection_prefers_explicit_provider_id_over_class_name() -> void:
 	var manager: InputManager = add_child_autoqfree(InputManager.new())
-	manager.input_priority = ["mediapipe_python", "keyboard"]
+	manager.input_priority = ["camera_tracking", "keyboard"]
 
 	var fallback_provider: FakeProvider = add_child_autoqfree(FakeProvider.new("keyboard"))
-	var preferred_provider: FakeProvider = add_child_autoqfree(FakeProvider.new("mediapipe_python"))
+	var preferred_provider: FakeProvider = add_child_autoqfree(FakeProvider.new("camera_tracking"))
 
 	assert_true(manager.register_provider(fallback_provider))
 	assert_eq(manager.get_active_provider(), fallback_provider)
 
 	assert_true(manager.register_provider(preferred_provider))
 	assert_eq(manager.get_active_provider(), preferred_provider)
+
+func test_registry_compatibly_resolves_legacy_mediapipe_provider_lookup_to_camera_tracking() -> void:
+	var provider: FakeProvider = add_child_autoqfree(FakeProvider.new("camera_tracking"))
+	var publish := AeroProviderSessionRegistry.publish_session("camera_tracking_owner", provider, {"session_key": "camera_tracking/shared"})
+	assert_true(bool(publish.get("ok", false)))
+	var by_provider := AeroProviderSessionRegistry.request_session({"provider_id": "mediapipe_python"})
+	assert_true(bool(by_provider.get("ok", false)))
+	assert_eq(String(by_provider.get("session", {}).get("provider_id", "")), "camera_tracking")
+	var by_session_key := AeroProviderSessionRegistry.request_session({"session_key": "mediapipe_python/shared"})
+	assert_true(bool(by_session_key.get("ok", false)))
+	assert_eq(String(by_session_key.get("session", {}).get("session_key", "")), "camera_tracking/shared")

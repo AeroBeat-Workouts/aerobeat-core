@@ -34,6 +34,10 @@ const _KNOWN_CAPABILITIES := [
 	AeroInputProvider.Capability.VELOCITY,
 ]
 
+const _LEGACY_PROVIDER_LOOKUP_ALIASES := {
+	"mediapipe_python": "camera_tracking",
+}
+
 static var _sessions: Dictionary = {}
 
 ## Publish or refresh a live provider session owned by one lane/repo.
@@ -283,12 +287,14 @@ static func _find_session_record(request: Dictionary) -> Dictionary:
 	var normalized_request := request.duplicate(true)
 	var explicit_session_key := String(normalized_request.get("session_key", "")).strip_edges()
 	if not explicit_session_key.is_empty():
-		var exact_match: Dictionary = _sessions.get(explicit_session_key, {})
-		if not exact_match.is_empty() and _session_matches_request(exact_match, normalized_request):
-			return exact_match
+		var lookup_keys := _lookup_session_keys(explicit_session_key)
+		for candidate_key in lookup_keys:
+			var exact_match: Dictionary = _sessions.get(candidate_key, {})
+			if not exact_match.is_empty() and _session_matches_request(exact_match, normalized_request):
+				return exact_match
 		return {}
 
-	var provider_id := String(normalized_request.get("provider_id", "")).strip_edges().to_snake_case()
+	var provider_id := _normalize_provider_lookup_id(normalized_request.get("provider_id", ""))
 	if provider_id.is_empty():
 		return {}
 
@@ -299,11 +305,31 @@ static func _find_session_record(request: Dictionary) -> Dictionary:
 		var record: Dictionary = _sessions.get(key, {})
 		if record.is_empty():
 			continue
-		if String(record.get("provider_id", "")) != provider_id:
+		if _normalize_provider_lookup_id(record.get("provider_id", "")) != provider_id:
 			continue
 		if _session_matches_request(record, normalized_request):
 			return record
 	return {}
+
+
+static func _lookup_session_keys(session_key: String) -> Array[String]:
+	var normalized_session_key := String(session_key).strip_edges()
+	if normalized_session_key.is_empty():
+		return []
+	var keys: Array[String] = [normalized_session_key]
+	var slash_index := normalized_session_key.find("/")
+	var root := normalized_session_key if slash_index < 0 else normalized_session_key.substr(0, slash_index)
+	var suffix := "" if slash_index < 0 else normalized_session_key.substr(slash_index)
+	var normalized_root := _normalize_provider_lookup_id(root)
+	if normalized_root != root:
+		keys.append("%s%s" % [normalized_root, suffix])
+	return keys
+
+static func _normalize_provider_lookup_id(provider_id_variant: Variant) -> String:
+	var provider_id := String(provider_id_variant).strip_edges().to_snake_case()
+	if _LEGACY_PROVIDER_LOOKUP_ALIASES.has(provider_id):
+		return String(_LEGACY_PROVIDER_LOOKUP_ALIASES[provider_id])
+	return provider_id
 
 static func _session_matches_request(record: Dictionary, request: Dictionary) -> bool:
 	var owner_filter := String(request.get("owner_id", "")).strip_edges()

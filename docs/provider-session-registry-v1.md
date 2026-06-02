@@ -4,11 +4,11 @@
 
 ## Why this exists
 
-Some downstream tool lanes, including camera-gesture proving work, can consume the same live MediaPipe-capable provider data that another lane already started.
+Some downstream tool lanes, including camera-gesture proving work, can consume the same live camera-tracking-capable provider data that another lane already started.
 
 Without a shared seam, each lane tends to do its own private `load(...).new(); start(...)`, which can:
 
-- spawn duplicate MediaPipe sidecars
+- spawn duplicate camera-tracking sidecars
 - open duplicate camera handles
 - create confusing double ownership of provider shutdown
 - make cross-repo coordination a pile of private hacks
@@ -53,7 +53,7 @@ var publish := AeroProviderSessionRegistry.publish_session(
     "aerobeat-input-mediapipe-python:testbed",
     provider,
     {
-        "session_key": "mediapipe_python/desktop_main",
+        "session_key": "camera_tracking/desktop_main",
         "metadata": {
             "lane": "desktop_main",
             "device": "camera0",
@@ -71,7 +71,7 @@ var publish := AeroProviderSessionRegistry.publish_session(
 
 ```gdscript
 var request := AeroProviderSessionRegistry.request_session({
-    "provider_id": "mediapipe_python",
+    "provider_id": "camera_tracking",
     "required_capabilities": [AeroInputProvider.Capability.GESTURE_RECOGNITION],
     "metadata_match": {
         "lane": "desktop_main",
@@ -90,7 +90,7 @@ Query does **not** change borrower state.
 ```gdscript
 var acquire := AeroProviderSessionRegistry.acquire_session(
     "aerobeat-tool-camera-gesture-control:testbed",
-    {"session_key": "mediapipe_python/desktop_main"}
+    {"session_key": "camera_tracking/desktop_main"}
 )
 
 if acquire.get("ok", false):
@@ -104,7 +104,7 @@ When the consumer is done:
 ```gdscript
 AeroProviderSessionRegistry.release_session(
     "aerobeat-tool-camera-gesture-control:testbed",
-    "mediapipe_python/desktop_main"
+    "camera_tracking/desktop_main"
 )
 ```
 
@@ -116,8 +116,8 @@ Use stable, explicit identities.
 
 Examples:
 
-- `session_key`: `mediapipe_python/desktop_main`
-- `session_key`: `mediapipe_python/camera0`
+- `session_key`: `camera_tracking/desktop_main`
+- `session_key`: `camera_tracking/camera0`
 - `owner_id`: `aerobeat-input-mediapipe-python:testbed`
 - `owner_id`: `aerobeat-assembly-community:input_manager`
 - `consumer_id`: `aerobeat-tool-camera-gesture-control:testbed`
@@ -126,7 +126,7 @@ Examples:
 
 For `aerobeat-tool-camera-gesture-control`, the next adoption step should be:
 
-1. before constructing/starting its own MediaPipe provider, call `request_session(...)` for `provider_id = "mediapipe_python"`
+1. before constructing/starting its own camera-tracking provider, call `request_session(...)` for `provider_id = "camera_tracking"`
 2. if a matching session exists, call `acquire_session(...)` and attach that shared provider to `CameraGestureController`
 3. if no matching session exists, create/start the provider the way the repo already does today
 4. after that provider is live, publish it with `publish_session(...)` so later lanes can reuse it
@@ -139,5 +139,5 @@ Today this registry is available in `aerobeat-input-core`, but downstream provid
 That means:
 
 - camera-gesture can start using this seam immediately
-- it will only avoid duplicate MediaPipe sessions when the involved owner/consumer lanes both use the registry
+- it will only avoid duplicate camera-tracking sessions when the involved owner/consumer lanes both use the registry
 - until `aerobeat-input-mediapipe-python` or another owner lane auto-publishes its live provider, consumers may still need to publish the provider they themselves started so later consumers can reuse it
