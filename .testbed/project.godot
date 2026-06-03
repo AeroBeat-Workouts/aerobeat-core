@@ -5,6 +5,11 @@ config/features=PackedStringArray("4.6", "Forward Plus")
 [application]
 config/name="AeroBeat Input Core Testbed"
 
+[autoload]
+
+AeroHeadlessManager="*res://addons/aerobeat-tool-headless-manager/src/AeroHeadlessManager.gd"
+
+
 [debug]
 gdscript/warnings/untyped_declaration=1
 
