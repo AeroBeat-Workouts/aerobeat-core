@@ -72,39 +72,29 @@ signal camera_devices_changed(devices: Array, selected_device_id: String)
 # SIGNALS: BOXING GAMEPLAY INTENTS (Proxied from active provider)
 # ============================================================================
 
-signal punch_left(power: float)
-signal punch_right(power: float)
+signal straight_left(power: float)
+signal straight_right(power: float)
 signal uppercut_left(power: float)
 signal uppercut_right(power: float)
 signal hook_left(power: float)
 signal hook_right(power: float)
-signal guard_start
-signal guard_end
-signal squat_start
-signal squat_end
-signal lean_left_start
-signal lean_left_end
-signal lean_right_start
-signal lean_right_end
-signal sidestep_left_start
-signal sidestep_left_end
-signal sidestep_right_start
-signal sidestep_right_end
-signal knee_left(power: float)
-signal knee_right(power: float)
-signal leg_lift_left_start
-signal leg_lift_left_end
-signal leg_lift_right_start
-signal leg_lift_right_end
+signal guard_enabled
+signal guard_disabled
+signal squat_enabled
+signal squat_disabled
+signal weave_left_enabled
+signal weave_left_disabled
+signal weave_right_enabled
+signal weave_right_disabled
 
 # ============================================================================
-# SIGNALS: FLOW GAMEPLAY INTENTS (Proxied from active provider)
+# SIGNALS: SHARED CALIBRATED BODY-CELL / CALIBRATION LANE
 # ============================================================================
 
-signal swing_left(placement: StringName, direction: StringName)
-signal swing_right(placement: StringName, direction: StringName)
-signal trail_left(placement: StringName, direction: StringName)
-signal trail_right(placement: StringName, direction: StringName)
+signal left_wrist_cell_entered(cell: int, direction: int)
+signal right_wrist_cell_entered(cell: int, direction: int)
+signal nose_cell_entered(cell: int, direction: int)
+signal calibration_session_updated(session: Dictionary)
 
 # ============================================================================
 # INTERNAL STATE
@@ -260,6 +250,24 @@ func set_provider_selected_camera_device_id(provider_id: String, device_id: Stri
 	_provider_settings[provider_id] = settings
 	return provider.set_selected_camera_device_id(device_id)
 
+## Request a fresh shared calibration pass from the active provider.
+func start_calibration() -> bool:
+	if _active_provider == null or not _active_provider.has_method("start_calibration"):
+		return false
+	return bool(_active_provider.start_calibration())
+
+## Cancel the current shared calibration pass on the active provider.
+func cancel_calibration() -> bool:
+	if _active_provider == null or not _active_provider.has_method("cancel_calibration"):
+		return false
+	return bool(_active_provider.cancel_calibration())
+
+## Return the active provider's shared calibration session document.
+func get_calibration_session() -> Dictionary:
+	if _active_provider == null or not _active_provider.has_method("get_calibration_session"):
+		return {}
+	return _active_provider.get_calibration_session()
+
 
 # ============================================================================
 # PUBLIC API: CAPABILITY CHECKS
@@ -299,20 +307,20 @@ func _connect_provider_signals(provider: AeroInputProvider) -> void:
 			camera_devices_changed.emit(devices, selected_device_id)
 	)
 	
-	if provider.has_signal("punch_left"):
+	if provider.has_signal("straight_left"):
 		_connect_boxing_signals(provider)
 	
-	if provider.has_signal("swing_left") \
-	or provider.has_signal("swing_right") \
-	or provider.has_signal("trail_left") \
-	or provider.has_signal("trail_right"):
-		_connect_flow_signals(provider)
+	if provider.has_signal("left_wrist_cell_entered") \
+	or provider.has_signal("right_wrist_cell_entered") \
+	or provider.has_signal("nose_cell_entered") \
+	or provider.has_signal("calibration_session_updated"):
+		_connect_body_cell_signals(provider)
 
 func _connect_boxing_signals(provider: AeroInputProvider) -> void:
-	if provider.has_signal("punch_left"):
-		provider.punch_left.connect(func(p): punch_left.emit(p))
-	if provider.has_signal("punch_right"):
-		provider.punch_right.connect(func(p): punch_right.emit(p))
+	if provider.has_signal("straight_left"):
+		provider.straight_left.connect(func(p): straight_left.emit(p))
+	if provider.has_signal("straight_right"):
+		provider.straight_right.connect(func(p): straight_right.emit(p))
 	if provider.has_signal("uppercut_left"):
 		provider.uppercut_left.connect(func(p): uppercut_left.emit(p))
 	if provider.has_signal("uppercut_right"):
@@ -322,73 +330,32 @@ func _connect_boxing_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("hook_right"):
 		provider.hook_right.connect(func(p): hook_right.emit(p))
 	
-	if provider.has_signal("guard_start"):
-		provider.guard_start.connect(func(): guard_start.emit())
-	if provider.has_signal("guard_end"):
-		provider.guard_end.connect(func(): guard_end.emit())
-	if provider.has_signal("squat_start"):
-		provider.squat_start.connect(func(): squat_start.emit())
-	if provider.has_signal("squat_end"):
-		provider.squat_end.connect(func(): squat_end.emit())
-	if provider.has_signal("lean_left_start"):
-		provider.lean_left_start.connect(func(): lean_left_start.emit())
-	if provider.has_signal("lean_left_end"):
-		provider.lean_left_end.connect(func(): lean_left_end.emit())
-	if provider.has_signal("lean_right_start"):
-		provider.lean_right_start.connect(func(): lean_right_start.emit())
-	if provider.has_signal("lean_right_end"):
-		provider.lean_right_end.connect(func(): lean_right_end.emit())
-	if provider.has_signal("sidestep_left_start"):
-		provider.sidestep_left_start.connect(func(): sidestep_left_start.emit())
-	if provider.has_signal("sidestep_left_end"):
-		provider.sidestep_left_end.connect(func(): sidestep_left_end.emit())
-	if provider.has_signal("sidestep_right_start"):
-		provider.sidestep_right_start.connect(func(): sidestep_right_start.emit())
-	if provider.has_signal("sidestep_right_end"):
-		provider.sidestep_right_end.connect(func(): sidestep_right_end.emit())
-	
-	if provider.has_signal("knee_left"):
-		provider.knee_left.connect(func(p): knee_left.emit(p))
-	if provider.has_signal("knee_right"):
-		provider.knee_right.connect(func(p): knee_right.emit(p))
-	if provider.has_signal("leg_lift_left_start"):
-		provider.leg_lift_left_start.connect(func(): leg_lift_left_start.emit())
-	if provider.has_signal("leg_lift_left_end"):
-		provider.leg_lift_left_end.connect(func(): leg_lift_left_end.emit())
-	if provider.has_signal("leg_lift_right_start"):
-		provider.leg_lift_right_start.connect(func(): leg_lift_right_start.emit())
-	if provider.has_signal("leg_lift_right_end"):
-		provider.leg_lift_right_end.connect(func(): leg_lift_right_end.emit())
+	if provider.has_signal("guard_enabled"):
+		provider.guard_enabled.connect(func(): guard_enabled.emit())
+	if provider.has_signal("guard_disabled"):
+		provider.guard_disabled.connect(func(): guard_disabled.emit())
+	if provider.has_signal("squat_enabled"):
+		provider.squat_enabled.connect(func(): squat_enabled.emit())
+	if provider.has_signal("squat_disabled"):
+		provider.squat_disabled.connect(func(): squat_disabled.emit())
+	if provider.has_signal("weave_left_enabled"):
+		provider.weave_left_enabled.connect(func(): weave_left_enabled.emit())
+	if provider.has_signal("weave_left_disabled"):
+		provider.weave_left_disabled.connect(func(): weave_left_disabled.emit())
+	if provider.has_signal("weave_right_enabled"):
+		provider.weave_right_enabled.connect(func(): weave_right_enabled.emit())
+	if provider.has_signal("weave_right_disabled"):
+		provider.weave_right_disabled.connect(func(): weave_right_disabled.emit())
 
-func _connect_flow_signals(provider: AeroInputProvider) -> void:
-	if provider.has_signal("swing_left"):
-		provider.swing_left.connect(func(p, d): swing_left.emit(p, d))
-	if provider.has_signal("swing_right"):
-		provider.swing_right.connect(func(p, d): swing_right.emit(p, d))
-	if provider.has_signal("trail_left"):
-		provider.trail_left.connect(func(p, d): trail_left.emit(p, d))
-	if provider.has_signal("trail_right"):
-		provider.trail_right.connect(func(p, d): trail_right.emit(p, d))
-	if provider.has_signal("squat_start"):
-		provider.squat_start.connect(func(): squat_start.emit())
-	if provider.has_signal("squat_end"):
-		provider.squat_end.connect(func(): squat_end.emit())
-	if provider.has_signal("lean_left_start"):
-		provider.lean_left_start.connect(func(): lean_left_start.emit())
-	if provider.has_signal("lean_left_end"):
-		provider.lean_left_end.connect(func(): lean_left_end.emit())
-	if provider.has_signal("lean_right_start"):
-		provider.lean_right_start.connect(func(): lean_right_start.emit())
-	if provider.has_signal("lean_right_end"):
-		provider.lean_right_end.connect(func(): lean_right_end.emit())
-	if provider.has_signal("sidestep_left_start"):
-		provider.sidestep_left_start.connect(func(): sidestep_left_start.emit())
-	if provider.has_signal("sidestep_left_end"):
-		provider.sidestep_left_end.connect(func(): sidestep_left_end.emit())
-	if provider.has_signal("sidestep_right_start"):
-		provider.sidestep_right_start.connect(func(): sidestep_right_start.emit())
-	if provider.has_signal("sidestep_right_end"):
-		provider.sidestep_right_end.connect(func(): sidestep_right_end.emit())
+func _connect_body_cell_signals(provider: AeroInputProvider) -> void:
+	if provider.has_signal("left_wrist_cell_entered"):
+		provider.left_wrist_cell_entered.connect(func(cell, direction): left_wrist_cell_entered.emit(cell, direction))
+	if provider.has_signal("right_wrist_cell_entered"):
+		provider.right_wrist_cell_entered.connect(func(cell, direction): right_wrist_cell_entered.emit(cell, direction))
+	if provider.has_signal("nose_cell_entered"):
+		provider.nose_cell_entered.connect(func(cell, direction): nose_cell_entered.emit(cell, direction))
+	if provider.has_signal("calibration_session_updated"):
+		provider.calibration_session_updated.connect(func(session): calibration_session_updated.emit(session.duplicate(true)))
 
 func _disconnect_provider_signals(provider: AeroInputProvider) -> void:
 	# Godot will usually clean these up when the provider is freed, but we keep the

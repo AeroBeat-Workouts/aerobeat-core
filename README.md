@@ -24,6 +24,7 @@ This repo intentionally owns:
 
 - normalized input/provider lifecycle contracts
 - camera-first Boxing and Flow gameplay-intent surfaces
+- the shared calibrated `BodyCellInput` lane for generic wrist/nose cell-entry consumers and calibration UIs
 - optional capability and observation seams that providers may expose
 - shared in-process provider/session reuse contracts
 - the canonical UI interaction contract and native 2D bridge lane that gameplay and UI can both consume
@@ -41,8 +42,9 @@ This repo intentionally does **not** own:
 Current checked-in surfaces include:
 
 - `AeroInputProvider` base contract for normalized provider lifecycle, optional capability reporting, and optional observation/spatial queries
-- `FlowInput` contract for camera-first Flow gameplay intents
-- `BoxingInput` contract for camera-first Boxing gameplay intents
+- `BodyCellInput` shared contract for generic left/right wrist + nose cell-entry events and calibration-session control/update surfaces
+- `FlowInput` contract for camera-first Flow gameplay intents plus the shared body-cell lane
+- `BoxingInput` contract for camera-first Boxing gameplay intents plus the shared body-cell lane
 - `InputManager` runtime coordinator that proxies the gameplay-facing intent surface
 - `AeroProviderSessionRegistry` for explicit owner/borrower reuse of already-active provider sessions in one Godot runtime
 - `src/ui/` interaction contracts, buses, adapters, and listener/interactable helpers for screen-space, hybrid 3D GUI, and future XR/world paths
