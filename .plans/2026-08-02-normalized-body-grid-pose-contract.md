@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-02  
 **Status:** In Progress  
-**Last Updated:** 2026-08-02 18:54 EDT  
+**Last Updated:** 2026-08-02 18:57 EDT
 **Blocked Reason:** None  
 **Agent:** pico
 
@@ -212,7 +212,7 @@ signal body_grid_calibration_canceled(event: Dictionary)
 
 ### Task 2: Freeze Executable Contract Slices
 
-**Bead ID:** `aerobeat-input-core-ij5`  
+**Bead ID:** `aerobeat-input-core-ij5`
 **SubAgent:** `primary` (for `research` / `auditor` workflow roles)  
 **Role:** `research`  
 **References:** `REF-01` through `REF-05`  
@@ -259,11 +259,31 @@ signal body_grid_calibration_canceled(event: Dictionary)
 
 ### Task 4: QA Input-Core Contract
 
-**Bead ID:** `aerobeat-input-core-ij5`  
-**SubAgent:** `primary` (for `qa` workflow role)  
-**Role:** `qa`  
-**References:** `REF-01` through `REF-06`  
+**Bead ID:** `aerobeat-input-core-ij5`
+**SubAgent:** `primary` (for `qa` workflow role)
+**Role:** `qa`
+**References:** `REF-01` through `REF-06`
 **Prompt:** Claim bead `aerobeat-input-core-ij5` on start. Perform QA for commit `c191de4` against this plan and the bead notes. Verify the new input-core body-grid contract API, separate calibration lifecycle API, invalid anchor shape, active-provider-only InputManager proxy behavior, deep-copy behavior, provider switch/stop invalidation, README docs, and tests. Run the relevant Godot import/unit validation. Do not close the bead unless this QA role owns closure in its prompt; return pass/fail evidence and any gaps for the auditor.
+
+**Folders Created/Deleted/Modified:**
+- None expected.
+
+**Files Created/Deleted/Modified:**
+- None expected.
+
+**Status:** ✅ Complete
+
+**Results:** QA passed against commit `c191de4` and the current pushed plan state. Parent verification reran `godot --headless --path .testbed --import` successfully and `godot --headless --path .testbed --script addons/aerobeat-vendor-godot-unit-test/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit` successfully with `41/41` tests and `442` assertions. The verified surface includes the per-body-part body-grid anchor signals/queries, separate calibration lifecycle signals/query, schema-shaped invalid anchors, active-provider-only proxying, provider switch/stop invalidation, deep-copy behavior, README coverage, and top-left 4x3 cells `0/3/8/11`.
+
+---
+
+### Task 5: Audit Input-Core Contract
+
+**Bead ID:** `aerobeat-input-core-ij5`
+**SubAgent:** `primary` (for `auditor` workflow role)
+**Role:** `auditor`
+**References:** `REF-01` through `REF-06`
+**Prompt:** Claim bead `aerobeat-input-core-ij5` on start. Independently audit commit `c191de4` plus plan commit `ce2a00e` and the latest plan updates against this plan and bead. Verify the implementation truly provides the frozen input-core normalized body-grid contract: exact per-body-part nose/left-wrist/right-wrist signals and queries, separate calibration lifecycle signals/query, schema-shaped invalid anchor payloads, active-provider-only `InputManager` proxying, deep-copy behavior, provider stop/switch invalidation, README documentation, and focused tests. Review the parent validation evidence and rerun relevant validation if needed. If it passes, close bead `aerobeat-input-core-ij5` with a clear reason; if it fails, leave it open and report exact gaps.
 
 **Folders Created/Deleted/Modified:**
 - None expected.
@@ -273,7 +293,7 @@ signal body_grid_calibration_canceled(event: Dictionary)
 
 **Status:** ⏳ Pending
 
-**Results:** Pending QA.
+**Results:** Pending audit.
 
 ---
 
