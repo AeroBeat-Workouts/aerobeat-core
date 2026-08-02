@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-02  
 **Status:** In Progress  
-**Last Updated:** 2026-08-02 18:45 EDT  
+**Last Updated:** 2026-08-02 18:54 EDT  
 **Blocked Reason:** None  
 **Agent:** pico
 
@@ -232,7 +232,7 @@ signal body_grid_calibration_canceled(event: Dictionary)
 
 ### Task 3: Implement Input-Core Contract
 
-**Bead ID:** `Pending`  
+**Bead ID:** `aerobeat-input-core-ij5`  
 **SubAgent:** `primary` (for `coder` / `qa` / `auditor` workflow roles)  
 **Role:** `coder`  
 **References:** `REF-01` through `REF-06`  
@@ -241,13 +241,39 @@ signal body_grid_calibration_canceled(event: Dictionary)
 **Folders Created/Deleted/Modified:**
 - `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/src/`
 - `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/tests/`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.testbed/tests/unit/`
 
 **Files Created/Deleted/Modified:**
-- Pending implementation.
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/README.md`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/src/interfaces/body_cell_input.gd`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/src/input_manager.gd`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.testbed/tests/unit/test_body_grid_contract.gd`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.testbed/tests/unit/test_body_grid_contract.gd.uid`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.testbed/tests/unit/test_input_provider.gd`
+
+**Status:** ✅ Coder Complete / QA Pending
+
+**Results:** Coder implementation completed in commit `c191de4` (`Implement normalized body-grid contract`) and was pushed to `origin/main`. The implementation added the `BodyCellInput` and `InputManager` body-grid anchor signals/queries, separate calibration lifecycle signals/query, schema-shaped invalid anchor defaults, active-provider-only proxying, deep-copy semantics, provider stop/switch invalidation, README documentation, and focused GUT coverage. Validation passed: `godot --headless --path .testbed --import`; `godot --headless --path .testbed --script addons/aerobeat-vendor-godot-unit-test/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit` with `41/41` tests and `442` assertions. Bead `aerobeat-input-core-ij5` remains open for QA/audit.
+
+---
+
+### Task 4: QA Input-Core Contract
+
+**Bead ID:** `aerobeat-input-core-ij5`  
+**SubAgent:** `primary` (for `qa` workflow role)  
+**Role:** `qa`  
+**References:** `REF-01` through `REF-06`  
+**Prompt:** Claim bead `aerobeat-input-core-ij5` on start. Perform QA for commit `c191de4` against this plan and the bead notes. Verify the new input-core body-grid contract API, separate calibration lifecycle API, invalid anchor shape, active-provider-only InputManager proxy behavior, deep-copy behavior, provider switch/stop invalidation, README docs, and tests. Run the relevant Godot import/unit validation. Do not close the bead unless this QA role owns closure in its prompt; return pass/fail evidence and any gaps for the auditor.
+
+**Folders Created/Deleted/Modified:**
+- None expected.
+
+**Files Created/Deleted/Modified:**
+- None expected.
 
 **Status:** ⏳ Pending
 
-**Results:** Execution bead created. This is the first dependency seam and blocks camera-tracking provider emission plus runner testbed consumption.
+**Results:** Pending QA.
 
 ---
 
