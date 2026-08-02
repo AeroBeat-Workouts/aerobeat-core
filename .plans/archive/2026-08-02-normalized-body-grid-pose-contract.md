@@ -1,8 +1,8 @@
 # Normalized Body Grid Pose Contract
 
 **Date:** 2026-08-02  
-**Status:** In Progress  
-**Last Updated:** 2026-08-02 18:57 EDT
+**Status:** Complete  
+**Last Updated:** 2026-08-02 19:01 EDT
 **Blocked Reason:** None  
 **Agent:** pico
 
@@ -251,9 +251,9 @@ signal body_grid_calibration_canceled(event: Dictionary)
 - `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.testbed/tests/unit/test_body_grid_contract.gd.uid`
 - `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.testbed/tests/unit/test_input_provider.gd`
 
-**Status:** ✅ Coder Complete / QA Pending
+**Status:** ✅ Complete
 
-**Results:** Coder implementation completed in commit `c191de4` (`Implement normalized body-grid contract`) and was pushed to `origin/main`. The implementation added the `BodyCellInput` and `InputManager` body-grid anchor signals/queries, separate calibration lifecycle signals/query, schema-shaped invalid anchor defaults, active-provider-only proxying, deep-copy semantics, provider stop/switch invalidation, README documentation, and focused GUT coverage. Validation passed: `godot --headless --path .testbed --import`; `godot --headless --path .testbed --script addons/aerobeat-vendor-godot-unit-test/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit` with `41/41` tests and `442` assertions. Bead `aerobeat-input-core-ij5` remains open for QA/audit.
+**Results:** Coder implementation completed in commit `c191de4` (`Implement normalized body-grid contract`) and was pushed to `origin/main`. The implementation added the `BodyCellInput` and `InputManager` body-grid anchor signals/queries, separate calibration lifecycle signals/query, schema-shaped invalid anchor defaults, active-provider-only proxying, deep-copy semantics, provider stop/switch invalidation, README documentation, and focused GUT coverage. Validation passed: `godot --headless --path .testbed --import`; `godot --headless --path .testbed --script addons/aerobeat-vendor-godot-unit-test/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit` with `41/41` tests and `442` assertions. Bead `aerobeat-input-core-ij5` later passed QA/audit and was closed.
 
 ---
 
@@ -291,25 +291,27 @@ signal body_grid_calibration_canceled(event: Dictionary)
 **Files Created/Deleted/Modified:**
 - None expected.
 
-**Status:** ⏳ Pending
+**Status:** ✅ Complete
 
-**Results:** Pending audit.
+**Results:** Auditor passed and closed bead `aerobeat-input-core-ij5`. Audit verified current `main` at `872566b`, implementation commit `c191de4`, and plan commits `ce2a00e`/`872566b`. Evidence confirmed exact per-body-part anchor signals/queries, separate calibration lifecycle signals/query, schema-shaped invalid anchors, active-provider gated proxying, deep-copy behavior, stop/switch plus calibration start/fail/cancel invalidation, README consistency, and tests for all required seams including top-left 4x3 cells `0`, `3`, `8`, and `11`. Auditor reran validation successfully: Godot import passed and GUT passed `41/41` tests with `442` assertions.
 
 ---
 
 ## Final Results
 
-**Status:** ⚠️ Partial
+**Status:** ✅ Complete
 
-**What We Built:** Frozen contract plan. Implementation is ready to start as the first dependency seam.
+**What We Built:** First-class input-core normalized body-grid contract for nose, left wrist, and right wrist; separate body-grid calibration lifecycle events/query; `InputManager` active-provider proxying; schema-shaped invalid anchors; README coverage; and focused unit tests.
 
-**Reference Check:** Subagent review completed against referenced input-core, input-camera-tracking, and runner files.
+**Reference Check:** Satisfied `REF-01` and `REF-02` for the input-core API and documentation surface. `REF-03` through `REF-06` remain active for the follow-up camera-tracking provider emission and runner testbed consumption seams.
 
 **Commits:**
-- Pending.
+- `c191de4` - Implement normalized body-grid contract
+- `ce2a00e` - Record input-core body-grid QA handoff
+- `872566b` - Record input-core body-grid QA result
 
-**Lessons Learned:** Pending.
+**Lessons Learned:** Keeping calibration lifecycle separate from pose payloads gave the runner a cleaner trigger for debug overlay visibility while preserving per-body-part continuous updates.
 
 ---
 
-*Completed on Pending*
+*Completed on 2026-08-02*
