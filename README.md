@@ -13,7 +13,7 @@ AeroBeat v1 gameplay is officially **camera-first**.
 This repo keeps the broader input abstraction surface so downstream packages can stay future-friendly, but the current product truth is narrower:
 
 - **Official v1 gameplay path:** camera providers
-- **Official v1 gameplay contract:** gameplay-facing intent signals, not raw pose streams
+- **Official v1 gameplay contract:** gameplay-facing intent signals plus calibrated normalized body-grid anchors, not raw provider pose streams
 - **Supported UI/navigation inputs:** mouse on desktop and touch on mobile
 - **Future / experimental / deprioritized gameplay paths:** XR, controllers, keyboard, haptics, and other non-camera providers
 - **Optional advanced capability surface:** lower-body tracking, richer 3D transforms, haptics, and other provider-specific extensions remain available in the contracts, but they are not required for v1 gameplay parity
@@ -24,7 +24,7 @@ This repo intentionally owns:
 
 - normalized input/provider lifecycle contracts
 - camera-first Boxing and Flow gameplay-intent surfaces
-- the shared calibrated `BodyCellInput` lane for generic wrist/nose cell-entry consumers and calibration UIs
+- the shared calibrated `BodyCellInput` lane for generic wrist/nose cell-entry consumers, normalized body-grid anchors, and calibration UIs
 - optional capability and observation seams that providers may expose
 - shared in-process provider/session reuse contracts
 - the canonical UI interaction contract and native 2D bridge lane that gameplay and UI can both consume
@@ -42,7 +42,7 @@ This repo intentionally does **not** own:
 Current checked-in surfaces include:
 
 - `AeroInputProvider` base contract for normalized provider lifecycle, optional capability reporting, and optional observation/spatial queries
-- `BodyCellInput` shared contract for generic left/right wrist + nose cell-entry events and calibration-session control/update surfaces
+- `BodyCellInput` shared contract for generic left/right wrist + nose cell-entry events, normalized body-grid anchor updates/queries, and calibration-session control/update surfaces
 - `FlowInput` contract for camera-first Flow gameplay intents plus the shared body-cell lane
 - `BoxingInput` contract for camera-first Boxing gameplay intents plus the shared body-cell lane
 - `InputManager` runtime coordinator that proxies the gameplay-facing intent surface

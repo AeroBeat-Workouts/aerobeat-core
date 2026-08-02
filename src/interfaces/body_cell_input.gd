@@ -34,6 +34,23 @@ signal nose_cell_entered(cell: int, direction: int)
 signal calibration_session_updated(session: Dictionary)
 
 # ============================================================================
+# SIGNALS: NORMALIZED BODY-GRID ANCHORS
+# ============================================================================
+
+signal body_grid_nose_updated(anchor: Dictionary)
+signal body_grid_left_wrist_updated(anchor: Dictionary)
+signal body_grid_right_wrist_updated(anchor: Dictionary)
+
+# ============================================================================
+# SIGNALS: NORMALIZED BODY-GRID CALIBRATION LIFECYCLE
+# ============================================================================
+
+signal body_grid_calibration_started(event: Dictionary)
+signal body_grid_calibration_succeeded(event: Dictionary)
+signal body_grid_calibration_failed(event: Dictionary)
+signal body_grid_calibration_canceled(event: Dictionary)
+
+# ============================================================================
 # CALIBRATION CONTROL
 # ============================================================================
 
@@ -51,6 +68,62 @@ func cancel_calibration() -> bool:
 ## Override in concrete providers that support runtime calibration.
 func get_calibration_session() -> Dictionary:
 	return {}
+
+# ============================================================================
+# NORMALIZED BODY-GRID QUERIES
+# ============================================================================
+
+## Return the latest normalized nose anchor in athlete-space top-left grid coordinates.
+func get_body_grid_nose() -> Dictionary:
+	return make_invalid_body_grid_anchor("nose")
+
+## Return the latest normalized left-wrist anchor in athlete-space top-left grid coordinates.
+func get_body_grid_left_wrist() -> Dictionary:
+	return make_invalid_body_grid_anchor("left_wrist")
+
+## Return the latest normalized right-wrist anchor in athlete-space top-left grid coordinates.
+func get_body_grid_right_wrist() -> Dictionary:
+	return make_invalid_body_grid_anchor("right_wrist")
+
+## Return the current body-grid calibration lifecycle state.
+func get_body_grid_calibration_state() -> Dictionary:
+	return make_body_grid_calibration_state("none")
+
+static func make_body_grid() -> Dictionary:
+	return {
+		"columns": 4,
+		"rows": 3,
+		"origin": "top_left",
+		"indexing": "row_major"
+	}
+
+static func make_invalid_body_grid_anchor(anchor_name: String) -> Dictionary:
+	return {
+		"schema": "aerobeat/body_grid_anchor",
+		"version": 1,
+		"anchor": anchor_name,
+		"valid": false,
+		"calibration_id": null,
+		"timestamp_ms": 0,
+		"grid": make_body_grid(),
+		"raw_x": null,
+		"raw_y": null,
+		"x": null,
+		"y": null,
+		"cell": null,
+		"row": null,
+		"column": null
+	}
+
+static func make_body_grid_calibration_state(state_name: String) -> Dictionary:
+	return {
+		"schema": "aerobeat/body_grid_calibration_event",
+		"version": 1,
+		"state": state_name,
+		"calibration_id": null,
+		"captured_at_ms": null,
+		"grid": make_body_grid()
+	}
 
 # ============================================================================
 # CAPABILITY CHECK

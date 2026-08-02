@@ -95,6 +95,13 @@ signal left_wrist_cell_entered(cell: int, direction: int)
 signal right_wrist_cell_entered(cell: int, direction: int)
 signal nose_cell_entered(cell: int, direction: int)
 signal calibration_session_updated(session: Dictionary)
+signal body_grid_nose_updated(anchor: Dictionary)
+signal body_grid_left_wrist_updated(anchor: Dictionary)
+signal body_grid_right_wrist_updated(anchor: Dictionary)
+signal body_grid_calibration_started(event: Dictionary)
+signal body_grid_calibration_succeeded(event: Dictionary)
+signal body_grid_calibration_failed(event: Dictionary)
+signal body_grid_calibration_canceled(event: Dictionary)
 
 # ============================================================================
 # INTERNAL STATE
@@ -108,6 +115,14 @@ var _active_provider: AeroInputProvider = null
 
 ## Provider settings cache: provider_id -> settings_dict.
 var _provider_settings: Dictionary = {}
+
+var _body_grid_anchors: Dictionary = {
+	"nose": BodyCellInput.make_invalid_body_grid_anchor("nose"),
+	"left_wrist": BodyCellInput.make_invalid_body_grid_anchor("left_wrist"),
+	"right_wrist": BodyCellInput.make_invalid_body_grid_anchor("right_wrist")
+}
+
+var _body_grid_calibration_state: Dictionary = BodyCellInput.make_body_grid_calibration_state("none")
 
 # ============================================================================
 # PUBLIC API: PROVIDER REGISTRATION
@@ -158,6 +173,7 @@ func unregister_provider(provider_id: String) -> void:
 	if _active_provider == provider:
 		provider.stop()
 		_active_provider = null
+		_clear_body_grid_anchors(true)
 	
 	_disconnect_provider_signals(provider)
 	
@@ -208,6 +224,7 @@ func set_active_provider(provider: AeroInputProvider) -> bool:
 	
 	if _active_provider != null and _active_provider != provider:
 		_active_provider.stop()
+		_clear_body_grid_anchors(true)
 	
 	var settings: Dictionary = _provider_settings.get(provider_id, {})
 	var settings_json: String = JSON.stringify(settings)
@@ -226,6 +243,7 @@ func stop_active_provider() -> void:
 	if _active_provider != null:
 		_active_provider.stop()
 		_active_provider = null
+		_clear_body_grid_anchors(true)
 
 ## Return the active provider's available camera devices.
 func get_active_provider_camera_devices() -> Array:
@@ -268,6 +286,21 @@ func get_calibration_session() -> Dictionary:
 		return {}
 	return _active_provider.get_calibration_session()
 
+func get_body_grid_nose() -> Dictionary:
+	return _get_body_grid_anchor_from_active_provider("nose", "get_body_grid_nose")
+
+func get_body_grid_left_wrist() -> Dictionary:
+	return _get_body_grid_anchor_from_active_provider("left_wrist", "get_body_grid_left_wrist")
+
+func get_body_grid_right_wrist() -> Dictionary:
+	return _get_body_grid_anchor_from_active_provider("right_wrist", "get_body_grid_right_wrist")
+
+func get_body_grid_calibration_state() -> Dictionary:
+	if _active_provider != null and _active_provider.has_method("get_body_grid_calibration_state"):
+		var provider_state: Variant = _active_provider.get_body_grid_calibration_state()
+		if provider_state is Dictionary:
+			_body_grid_calibration_state = provider_state.duplicate(true)
+	return _body_grid_calibration_state.duplicate(true)
 
 # ============================================================================
 # PUBLIC API: CAPABILITY CHECKS
@@ -296,7 +329,12 @@ func any_provider_has_capability(capability: AeroInputProvider.Capability) -> bo
 
 func _connect_provider_signals(provider: AeroInputProvider) -> void:
 	provider.started.connect(func(): started.emit())
-	provider.stopped.connect(func(): stopped.emit())
+	provider.stopped.connect(func():
+		if provider == _active_provider:
+			_clear_body_grid_anchors(true)
+			_active_provider = null
+		stopped.emit()
+	)
 	provider.failed.connect(func(err): failed.emit(err))
 	
 	provider.tracking_updated.connect(
@@ -313,7 +351,14 @@ func _connect_provider_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("left_wrist_cell_entered") \
 	or provider.has_signal("right_wrist_cell_entered") \
 	or provider.has_signal("nose_cell_entered") \
-	or provider.has_signal("calibration_session_updated"):
+	or provider.has_signal("calibration_session_updated") \
+	or provider.has_signal("body_grid_nose_updated") \
+	or provider.has_signal("body_grid_left_wrist_updated") \
+	or provider.has_signal("body_grid_right_wrist_updated") \
+	or provider.has_signal("body_grid_calibration_started") \
+	or provider.has_signal("body_grid_calibration_succeeded") \
+	or provider.has_signal("body_grid_calibration_failed") \
+	or provider.has_signal("body_grid_calibration_canceled"):
 		_connect_body_cell_signals(provider)
 
 func _connect_boxing_signals(provider: AeroInputProvider) -> void:
@@ -349,13 +394,110 @@ func _connect_boxing_signals(provider: AeroInputProvider) -> void:
 
 func _connect_body_cell_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("left_wrist_cell_entered"):
-		provider.left_wrist_cell_entered.connect(func(cell, direction): left_wrist_cell_entered.emit(cell, direction))
+		provider.left_wrist_cell_entered.connect(func(cell, direction):
+			if provider == _active_provider:
+				left_wrist_cell_entered.emit(cell, direction)
+		)
 	if provider.has_signal("right_wrist_cell_entered"):
-		provider.right_wrist_cell_entered.connect(func(cell, direction): right_wrist_cell_entered.emit(cell, direction))
+		provider.right_wrist_cell_entered.connect(func(cell, direction):
+			if provider == _active_provider:
+				right_wrist_cell_entered.emit(cell, direction)
+		)
 	if provider.has_signal("nose_cell_entered"):
-		provider.nose_cell_entered.connect(func(cell, direction): nose_cell_entered.emit(cell, direction))
+		provider.nose_cell_entered.connect(func(cell, direction):
+			if provider == _active_provider:
+				nose_cell_entered.emit(cell, direction)
+		)
 	if provider.has_signal("calibration_session_updated"):
-		provider.calibration_session_updated.connect(func(session): calibration_session_updated.emit(session.duplicate(true)))
+		provider.calibration_session_updated.connect(func(session):
+			if provider == _active_provider:
+				calibration_session_updated.emit(session.duplicate(true))
+		)
+	if provider.has_signal("body_grid_nose_updated"):
+		provider.body_grid_nose_updated.connect(func(anchor):
+			_handle_body_grid_anchor_updated(provider, "nose", anchor)
+		)
+	if provider.has_signal("body_grid_left_wrist_updated"):
+		provider.body_grid_left_wrist_updated.connect(func(anchor):
+			_handle_body_grid_anchor_updated(provider, "left_wrist", anchor)
+		)
+	if provider.has_signal("body_grid_right_wrist_updated"):
+		provider.body_grid_right_wrist_updated.connect(func(anchor):
+			_handle_body_grid_anchor_updated(provider, "right_wrist", anchor)
+		)
+	if provider.has_signal("body_grid_calibration_started"):
+		provider.body_grid_calibration_started.connect(func(event):
+			_handle_body_grid_calibration_event(provider, "started", event)
+			_clear_body_grid_anchors(true, false)
+		)
+	if provider.has_signal("body_grid_calibration_succeeded"):
+		provider.body_grid_calibration_succeeded.connect(func(event):
+			_handle_body_grid_calibration_event(provider, "succeeded", event)
+		)
+	if provider.has_signal("body_grid_calibration_failed"):
+		provider.body_grid_calibration_failed.connect(func(event):
+			_handle_body_grid_calibration_event(provider, "failed", event)
+			_clear_body_grid_anchors(true, false)
+		)
+	if provider.has_signal("body_grid_calibration_canceled"):
+		provider.body_grid_calibration_canceled.connect(func(event):
+			_handle_body_grid_calibration_event(provider, "canceled", event)
+			_clear_body_grid_anchors(true, false)
+		)
+
+func _get_body_grid_anchor_from_active_provider(anchor_name: String, method_name: String) -> Dictionary:
+	if _active_provider != null and _active_provider.has_method(method_name):
+		var provider_anchor: Variant = _active_provider.call(method_name)
+		if provider_anchor is Dictionary:
+			_body_grid_anchors[anchor_name] = provider_anchor.duplicate(true)
+	return _body_grid_anchors[anchor_name].duplicate(true)
+
+func _handle_body_grid_anchor_updated(provider: AeroInputProvider, anchor_name: String, anchor: Dictionary) -> void:
+	if provider != _active_provider:
+		return
+	var anchor_copy := anchor.duplicate(true)
+	_body_grid_anchors[anchor_name] = anchor_copy
+	match anchor_name:
+		"nose":
+			body_grid_nose_updated.emit(anchor_copy.duplicate(true))
+		"left_wrist":
+			body_grid_left_wrist_updated.emit(anchor_copy.duplicate(true))
+		"right_wrist":
+			body_grid_right_wrist_updated.emit(anchor_copy.duplicate(true))
+
+func _handle_body_grid_calibration_event(provider: AeroInputProvider, state_name: String, event: Dictionary) -> void:
+	if provider != _active_provider:
+		return
+	_body_grid_calibration_state = event.duplicate(true)
+	match state_name:
+		"started":
+			body_grid_calibration_started.emit(_body_grid_calibration_state.duplicate(true))
+		"succeeded":
+			body_grid_calibration_succeeded.emit(_body_grid_calibration_state.duplicate(true))
+		"failed":
+			body_grid_calibration_failed.emit(_body_grid_calibration_state.duplicate(true))
+		"canceled":
+			body_grid_calibration_canceled.emit(_body_grid_calibration_state.duplicate(true))
+
+func _clear_body_grid_anchors(emit_updates: bool, reset_calibration_state: bool = true) -> void:
+	var invalid_nose := BodyCellInput.make_invalid_body_grid_anchor("nose")
+	var invalid_left_wrist := BodyCellInput.make_invalid_body_grid_anchor("left_wrist")
+	var invalid_right_wrist := BodyCellInput.make_invalid_body_grid_anchor("right_wrist")
+	var should_emit: bool = emit_updates and (
+		_body_grid_anchors["nose"] != invalid_nose
+		or _body_grid_anchors["left_wrist"] != invalid_left_wrist
+		or _body_grid_anchors["right_wrist"] != invalid_right_wrist
+	)
+	_body_grid_anchors["nose"] = invalid_nose
+	_body_grid_anchors["left_wrist"] = invalid_left_wrist
+	_body_grid_anchors["right_wrist"] = invalid_right_wrist
+	if reset_calibration_state:
+		_body_grid_calibration_state = BodyCellInput.make_body_grid_calibration_state("none")
+	if not should_emit:
+		return
+	body_grid_nose_updated.emit(_body_grid_anchors["nose"].duplicate(true))
+	body_grid_left_wrist_updated.emit(_body_grid_anchors["left_wrist"].duplicate(true))
+	body_grid_right_wrist_updated.emit(_body_grid_anchors["right_wrist"].duplicate(true))
 
 func _disconnect_provider_signals(provider: AeroInputProvider) -> void:
 	# Godot will usually clean these up when the provider is freed, but we keep the
