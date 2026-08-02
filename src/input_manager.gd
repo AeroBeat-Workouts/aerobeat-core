@@ -72,12 +72,12 @@ signal camera_devices_changed(devices: Array, selected_device_id: String)
 # SIGNALS: BOXING GAMEPLAY INTENTS (Proxied from active provider)
 # ============================================================================
 
-signal straight_left(power: float)
-signal straight_right(power: float)
-signal uppercut_left(power: float)
-signal uppercut_right(power: float)
-signal hook_left(power: float)
-signal hook_right(power: float)
+signal straight_left
+signal straight_right
+signal uppercut_left
+signal uppercut_right
+signal hook_left
+signal hook_right
 signal guard_enabled
 signal guard_disabled
 signal squat_enabled
@@ -318,17 +318,17 @@ func _connect_provider_signals(provider: AeroInputProvider) -> void:
 
 func _connect_boxing_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("straight_left"):
-		provider.straight_left.connect(func(p): straight_left.emit(p))
+		provider.straight_left.connect(func(): straight_left.emit())
 	if provider.has_signal("straight_right"):
-		provider.straight_right.connect(func(p): straight_right.emit(p))
+		provider.straight_right.connect(func(): straight_right.emit())
 	if provider.has_signal("uppercut_left"):
-		provider.uppercut_left.connect(func(p): uppercut_left.emit(p))
+		provider.uppercut_left.connect(func(): uppercut_left.emit())
 	if provider.has_signal("uppercut_right"):
-		provider.uppercut_right.connect(func(p): uppercut_right.emit(p))
+		provider.uppercut_right.connect(func(): uppercut_right.emit())
 	if provider.has_signal("hook_left"):
-		provider.hook_left.connect(func(p): hook_left.emit(p))
+		provider.hook_left.connect(func(): hook_left.emit())
 	if provider.has_signal("hook_right"):
-		provider.hook_right.connect(func(p): hook_right.emit(p))
+		provider.hook_right.connect(func(): hook_right.emit())
 	
 	if provider.has_signal("guard_enabled"):
 		provider.guard_enabled.connect(func(): guard_enabled.emit())
@@ -412,4 +412,3 @@ func _exit_tree() -> void:
 	
 	_providers.clear()
 	_provider_settings.clear()
-

@@ -20,29 +20,23 @@ extends "body_cell_input.gd"
 # SIGNALS: OFFENSIVE INTENTS
 # ============================================================================
 
-## Emitted when a left straight punch intent is detected.
-## @param power: Punch power from 0.0 to 1.0
-signal straight_left(power: float)
+## Emitted when a left straight punch intent becomes active.
+signal straight_left
 
-## Emitted when a right straight punch intent is detected.
-## @param power: Punch power from 0.0 to 1.0
-signal straight_right(power: float)
+## Emitted when a right straight punch intent becomes active.
+signal straight_right
 
-## Emitted when a left uppercut intent is detected.
-## @param power: Uppercut power from 0.0 to 1.0
-signal uppercut_left(power: float)
+## Emitted when a left uppercut intent becomes active.
+signal uppercut_left
 
-## Emitted when a right uppercut intent is detected.
-## @param power: Uppercut power from 0.0 to 1.0
-signal uppercut_right(power: float)
+## Emitted when a right uppercut intent becomes active.
+signal uppercut_right
 
-## Emitted when a left hook intent is detected.
-## @param power: Hook power from 0.0 to 1.0
-signal hook_left(power: float)
+## Emitted when a left hook intent becomes active.
+signal hook_left
 
-## Emitted when a right hook intent is detected.
-## @param power: Hook power from 0.0 to 1.0
-signal hook_right(power: float)
+## Emitted when a right hook intent becomes active.
+signal hook_right
 
 # ============================================================================
 # SIGNALS: DEFENSIVE / STATE INTENTS
