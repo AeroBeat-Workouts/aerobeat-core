@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-02  
 **Status:** In Progress  
-**Last Updated:** 2026-08-02 14:48 EDT  
-**Blocked Reason:** Pending Derrick freeze/approval before implementation  
+**Last Updated:** 2026-08-02 18:45 EDT  
+**Blocked Reason:** None  
 **Agent:** pico
 
 ---
@@ -18,9 +18,9 @@ Add a first-class input-core contract for calibrated nose, left-wrist, and right
 
 The current input-core `BodyCellInput` lane exposes calibrated cell-entry events for left wrist, right wrist, and nose, plus shared calibration session updates. That is enough for smoke tests and intent events, but the playable Flow/Boxing testbeds need continuous body anchor positions inside the calibrated grid so the runner can map the athlete's nose and wrists into first-person world space and render debug markers.
 
-This slice should extend the shared body-cell lane rather than adding a runner-only camera-tracking dependency. Camera tracking remains the concrete provider of the data, but input-core owns the stable contract: normalized grid-space positions for the three gameplay anchors after calibration. The runner can then consume the same surface from `InputManager`, visualize the grid/nose/wrists after a calibration event, and fade that debug visualization after a public YAML-controlled duration.
+This slice should extend the shared body-cell lane rather than adding a runner-only camera-tracking dependency. Camera tracking remains the concrete provider of the data, but input-core owns the stable contract: normalized grid-space positions for the three gameplay anchors after calibration. The runner can then consume the same surface from `InputManager`, visualize the grid/nose/wrists after a separate calibration event, and fade that debug visualization after a public YAML-controlled duration.
 
-The debug rendering behavior belongs to the playable testbed plan and runner-root YAML. The core contract only says what data is available, when it is valid, how coordinates are normalized, and how consumers can query or subscribe to it.
+The debug rendering behavior belongs to the playable testbed plan and runner-root YAML. The core contract only says what data is available, when it is valid, how coordinates are normalized, how each body-part event is emitted, and how calibration events are surfaced separately from pose updates.
 
 ---
 
@@ -33,20 +33,21 @@ The debug rendering behavior belongs to the playable testbed plan and runner-roo
 | `REF-03` | Camera tracking calibration/grid implementation and proving scenes | `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/src/detectors/pose_detector_substrate.gd`, `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/.testbed/scenes/boxing_proving.tscn`, `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/.testbed/scenes/flow_proving.tscn` |
 | `REF-04` | Camera tracking YAML documentation/comment style | `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/assets/flow.gesture_detection.yaml`, `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/assets/boxing.gesture_detection.yaml` |
 | `REF-05` | Playable Flow/Boxing testbed plan that consumes this contract | `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-gameplay-runner/.plans/2026-08-02-playable-flow-boxing-testbeds.md` |
+| `REF-06` | Camera tracking debug visual config shape | `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/assets/flow.testbed_debug.yaml`, `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-camera-tracking/assets/boxing.testbed_debug.yaml` |
 
 ---
 
-## Frozen Requirements Candidate
+## Frozen Requirements
 
 ### Core Contract
 
-- Extend `BodyCellInput` with a continuous calibrated body-grid pose surface for exactly three first-pass anchors: `nose`, `left_wrist`, and `right_wrist`.
+- Extend `BodyCellInput` with continuous calibrated body-grid pose surfaces for exactly three first-pass anchors: `nose`, `left_wrist`, and `right_wrist`.
 - The contract is first-class input-core API, not provider debug data and not a runner-local adapter contract.
 - The surface should be available through the active provider and proxied by `InputManager`.
 - Keep the existing cell-entry signals. The new continuous surface complements cell-entry events; it does not replace them.
-- The surface becomes valid only after a successful calibration session. Before calibration, providers should emit/query invalid or empty pose data rather than fake normalized positions.
+- The surface becomes valid only after a successful calibration session. Before calibration, providers emit/query schema-shaped invalid body-part data rather than fake normalized positions or `{}`.
 - The surface should include a validity flag per anchor so a consumer can keep the grid visible while one wrist temporarily loses tracking.
-- The surface should carry the calibration/session identity or timestamp needed to know which calibration produced the normalized coordinates.
+- Pose updates must not bundle calibration lifecycle information. Calibration status/success/failure/resume events are separate input-core signals and queries, and pose events may reference the current calibration/session identity only as metadata.
 
 ### Coordinate Semantics
 
@@ -64,22 +65,34 @@ The debug rendering behavior belongs to the playable testbed plan and runner-roo
   - `x < 0.25`, `y >= 0.666...` maps to cell `8`, athlete lower-left.
   - `x >= 0.75`, `y >= 0.666...` maps to cell `11`, athlete lower-right.
 
-### Candidate API Shape
+### API Shape
 
-- Add a signal such as:
+- Add exactly one continuous signal per body part, not one combined pose-frame callback:
 
 ```gdscript
-signal body_grid_pose_updated(pose: Dictionary)
+signal body_grid_nose_updated(anchor: Dictionary)
+signal body_grid_left_wrist_updated(anchor: Dictionary)
+signal body_grid_right_wrist_updated(anchor: Dictionary)
 ```
 
-- Candidate `pose` dictionary shape:
+- Add separate calibration lifecycle signals. These are not bundled into body-part pose payloads:
+
+```gdscript
+signal body_grid_calibration_started(event: Dictionary)
+signal body_grid_calibration_succeeded(event: Dictionary)
+signal body_grid_calibration_failed(event: Dictionary)
+signal body_grid_calibration_canceled(event: Dictionary)
+```
+
+- Body-part `anchor` dictionary shape:
 
 ```gdscript
 {
-	"schema": "aerobeat/body_grid_pose",
+	"schema": "aerobeat/body_grid_anchor",
 	"version": 1,
+	"anchor": "nose",
 	"valid": true,
-	"calibration_id": "optional-stable-id-or-empty",
+	"calibration_id": "stable-id-from-latest-successful-calibration",
 	"timestamp_ms": 0,
 	"grid": {
 		"columns": 4,
@@ -87,37 +100,39 @@ signal body_grid_pose_updated(pose: Dictionary)
 		"origin": "top_left",
 		"indexing": "row_major"
 	},
-	"anchors": {
-		"nose": {
-			"valid": true,
-			"x": 0.5,
-			"y": 0.5,
-			"cell": 5,
-			"row": 1,
-			"column": 1
-		},
-		"left_wrist": {
-			"valid": true,
-			"x": 0.25,
-			"y": 0.5,
-			"cell": 5,
-			"row": 1,
-			"column": 1
-		},
-		"right_wrist": {
-			"valid": true,
-			"x": 0.75,
-			"y": 0.5,
-			"cell": 6,
-			"row": 1,
-			"column": 2
-		}
+	"raw_x": 0.52,
+	"raw_y": 0.34,
+	"x": 0.52,
+	"y": 0.34,
+	"cell": 5,
+	"row": 1,
+	"column": 1
+}
+```
+
+- Invalid body-part query/update dictionaries keep the same schema shape and set `valid: false`, `raw_x: null`, `raw_y: null`, `x: null`, `y: null`, `cell: null`, `row: null`, and `column: null`. Consumers must always check `valid` before using position fields.
+- A body-part anchor is valid when calibration is currently valid, tracking is `tracking` or `reacquiring`, the landmark exists, and the landmark confidence is at or above the existing camera-tracking body-cell/flow threshold used for that anchor.
+
+- Calibration event dictionary shape:
+
+```gdscript
+{
+	"schema": "aerobeat/body_grid_calibration_event",
+	"version": 1,
+	"state": "succeeded",
+	"calibration_id": "camera_tracking:1780000000000",
+	"captured_at_ms": 1780000000000,
+	"grid": {
+		"columns": 4,
+		"rows": 3,
+		"origin": "top_left",
+		"indexing": "row_major"
 	}
 }
 ```
 
-- Add a query such as `get_body_grid_pose() -> Dictionary` to `BodyCellInput` and `InputManager`.
-- Implementation review should decide whether small helper methods are worth adding, for example `get_body_anchor_grid_position(anchor_name: String) -> Dictionary`, or whether the single dictionary query is enough for v1.
+- Add body-part queries to `BodyCellInput` and `InputManager`: `get_body_grid_nose() -> Dictionary`, `get_body_grid_left_wrist() -> Dictionary`, and `get_body_grid_right_wrist() -> Dictionary`.
+- Add a calibration query to `BodyCellInput` and `InputManager`: `get_body_grid_calibration_state() -> Dictionary`.
 - Do not introduce a new Godot Resource type unless review finds dictionary shape too weak for existing repo patterns.
 
 ### Provider Implementation Requirement
@@ -125,37 +140,49 @@ signal body_grid_pose_updated(pose: Dictionary)
 - `aerobeat-input-camera-tracking` should emit/update this surface from the same calibrated bounds used for cell-entry and T-pose calibration.
 - The provider must document whether it uses mirrored preview coordinates or athlete-space coordinates. The accepted contract is athlete-space: cell `0` means the athlete's upper-left, and visual consumers must not accidentally mirror it to the athlete's right.
 - The provider should update this pose whenever fresh calibrated landmark data is evaluated, not only when a cell changes.
+- The provider emits schema-shaped invalid body-part updates immediately on tracking timeout, calibration start/cancel/fail, provider stop, or active provider switch.
+- `calibration_id` is generated only after a successful calibration and remains stable until the next successful calibration. Failed, canceled, or in-progress calibration attempts do not increment it. The provider emits `calibration_id` and `captured_at_ms` through `body_grid_calibration_succeeded(event)`.
 - Existing Flow and Boxing proving scenes should be able to show the normalized nose/wrist values as debug if the scene enables that overlay.
+- The camera-tracking testbed debug visual options for body pose, nose, and wrists should be promoted or mirrored into a reusable debug config shape so the playable testbed can enable the same class of visuals without depending on provider internals.
 
 ### Runner Testbed Consumption Requirement
 
-- The playable runner testbed should consume `InputManager.body_grid_pose_updated` and `InputManager.get_body_grid_pose()` instead of provider-specific landmark/debug APIs.
+- The playable runner testbed should consume the per-body-part `InputManager` signals/queries for nose, left wrist, and right wrist instead of provider-specific landmark/debug APIs.
+- The playable runner testbed should consume separate calibration events from `InputManager` to trigger grid/marker debug visibility and pause/recalibration/resume behavior.
 - After calibration completes, the runner testbed should show the calibrated grid, nose marker, left-wrist marker, and right-wrist marker visually.
 - Those debug markers should fade away after `debug.body_grid_pose_visible_after_calibration_ms`, default `2000`.
-- This fade duration belongs in runner-root `assets/playable_testbed.yaml` using the same documentation-comment style as `REF-04`.
-- A value of `0` should mean the debug visualization does not persist after calibration; review should decide whether a negative value should mean "stay visible until disabled" or whether that should be a separate boolean.
-- The runner testbed should still allow a debug toggle to keep the overlay visible for development.
+- This fade duration belongs in runner-root `assets/playable_testbed.yaml` using the exact documentation-comment shape from `REF-06`: every field has a short human comment directly above it, allowed options appear in the comment where relevant, and each runtime/debug field includes an ownership tag such as `runner testbed debug only`.
+- A value of `0` means the debug visualization does not persist after calibration.
+- The runner testbed should still allow debug toggles to keep the body pose, grid, nose, left-wrist, and right-wrist overlays visible for development.
 
 ---
 
-## Open Questions To Freeze Before Build
+## Frozen Build Decisions
 
-1. Freeze v1 as one coherent `body_grid_pose_updated(pose: Dictionary)` frame signal, not per-anchor signals. Per-anchor helpers can be added later as convenience APIs.
-2. Freeze `x/y` as clamped `[0.0, 1.0]` gameplay-ready coordinates and require `raw_x/raw_y` in v1 for QA/debug of mirroring and out-of-grid behavior.
-3. Freeze invalid query behavior: `BodyCellInput.get_body_grid_pose()` and `InputManager.get_body_grid_pose()` should return a schema-shaped invalid dictionary rather than `{}`. Decide whether invalid anchors include `x/y: 0.0` or omit meaningful `x/y`; consumers must always check `valid`.
-4. Freeze root `valid` semantics. Recommendation: root `valid` means calibration/session is valid and at least one anchor is valid; per-anchor `valid` carries partial tracking loss.
-5. Freeze tracking-loss behavior. Recommendation: emit an invalid pose immediately on tracking timeout, calibration start/cancel, provider stop, or active provider switch.
-6. Freeze runner overlay semantics: `debug.body_grid_pose_visible_after_calibration_ms: 2000` starts on `calibration_id` change / calibration success, `0 = no post-calibration persistence`, and always-visible behavior is controlled by a separate debug toggle. Avoid `-1` in v1.
-7. Freeze `calibration_id`. Recommendation: camera-tracking provider generates a stable ID per successful calibration, such as `"camera_tracking:%d" % captured_at_ms`, and also emits `calibration_captured_at_ms`.
+1. V1 uses the exact per-body-part signals and queries listed above.
+2. Calibration lifecycle is its own event/query surface and is never bundled into body-part payloads.
+3. `x/y` are clamped `[0.0, 1.0]` gameplay-ready coordinates, and `raw_x/raw_y` are required for QA/debug of mirroring and out-of-grid behavior.
+4. Invalid query behavior is schema-shaped invalid body-part dictionaries with nullable position fields.
+5. Tracking loss emits invalid body-part updates immediately on timeout, calibration start/cancel/fail, provider stop, or active provider switch.
+6. Runner overlay fade starts on separate calibration success event, `0 = no post-calibration persistence`, and always-visible behavior is controlled by separate debug toggles. Avoid `-1` in v1.
+7. `calibration_id` is stable per successful calibration and changes only on the next successful calibration.
 
 ## Audit Findings To Apply
 
 - The contract should remain input-core owned, with camera-tracking as the concrete provider and runner consuming only the `InputManager` surface.
-- `InputManager` should proxy `body_grid_pose_updated(pose)` only from the active provider, deep-duplicate emitted/query dictionaries, and clear cached pose to invalid when the active provider stops or switches.
-- Camera-tracking should build/store body-grid pose every evaluated `process_landmarks()` frame and emit it independently of cell transition events, including frames with no cell change.
+- `InputManager` should proxy per-body-part body-grid updates only from the active provider, deep-duplicate emitted/query dictionaries, and clear cached body-part anchors to invalid when the active provider stops or switches.
+- `InputManager` should proxy calibration lifecycle events separately from pose/body-part updates, using the active provider only.
+- Camera-tracking should build/store body-grid anchors every evaluated `process_landmarks()` frame and emit per-body-part updates independently of cell transition events, including frames with no cell change.
 - Public contract output must be athlete-space top-left normalized coordinates. Existing preview mirroring and gameplay-bottom-left internals must stay implementation/debug details and must not leak into emitted `x/y`.
 - Cell derivation should be `cell = floor(y * rows) * columns + floor(x * columns)`, with `x = 1.0` and `y = 1.0` clamped into the last column/row.
 - Per-anchor validity should reuse or explicitly name the camera-tracking confidence gate. Recommendation: an anchor is valid when calibrated, tracking is `tracking` or `reacquiring`, the landmark exists, and confidence is at or above the existing body-cell/flow threshold.
+
+## Derrick Corrections To Apply
+
+- Pose should be exposed as one callback/event per body part: nose, left wrist, and right wrist.
+- Calibration events should be emitted separately and should not be bundled with pose/body-part information.
+- Debug visuals from the input camera tracking testbed scene for body pose, wrists, and nose should be available as runner testbed options.
+- Runner/testbed YAML must use the same comment shape as the camera-tracking testbed/debug YAMLs: a comment directly above each field, allowed options where relevant, and an ownership note in comments for debug/runtime-only values.
 
 ---
 
@@ -185,11 +212,11 @@ signal body_grid_pose_updated(pose: Dictionary)
 
 ### Task 2: Freeze Executable Contract Slices
 
-**Bead ID:** `Pending`  
+**Bead ID:** `aerobeat-input-core-ij5`  
 **SubAgent:** `primary` (for `research` / `auditor` workflow roles)  
 **Role:** `research`  
 **References:** `REF-01` through `REF-05`  
-**Prompt:** After Task 1 review, update the plan with frozen API decisions and create execution beads for input-core contract changes, camera-tracking provider emission, runner testbed consumption/YAML debug controls, QA, and audit. Do not begin implementation until Derrick confirms the plan is ready to execute.
+**Prompt:** After Task 1 review and Derrick's corrections, update the plan with frozen API decisions and create execution beads for input-core per-body-part contract changes, separate calibration lifecycle events, camera-tracking provider emission, runner testbed consumption/YAML debug controls, QA, and audit.
 
 **Folders Created/Deleted/Modified:**
 - `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.plans/`
@@ -197,9 +224,30 @@ signal body_grid_pose_updated(pose: Dictionary)
 **Files Created/Deleted/Modified:**
 - `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/.plans/2026-08-02-normalized-body-grid-pose-contract.md`
 
+**Status:** ✅ Complete
+
+**Results:** Derrick corrected the contract direction: per-body-part pose events instead of one bundled pose frame, separate calibration events, and reusable debug visual options for body pose, wrists, and nose. The follow-up readiness audit passed from the runner plan and approved implementation seams. Input-core is the first dependency.
+
+---
+
+### Task 3: Implement Input-Core Contract
+
+**Bead ID:** `Pending`  
+**SubAgent:** `primary` (for `coder` / `qa` / `auditor` workflow roles)  
+**Role:** `coder`  
+**References:** `REF-01` through `REF-06`  
+**Prompt:** Implement the normalized body-grid per-body-part contract in input-core: exact nose/left-wrist/right-wrist signals and queries, separate calibration lifecycle signals/query, schema-shaped invalid anchor payloads, active-provider-only `InputManager` proxying, deep-copy semantics, and tests. This bead must complete before camera-tracking provider emission and runner consumption work.
+
+**Folders Created/Deleted/Modified:**
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/src/`
+- `/home/derrick/.openclaw/workspace/projects/aerobeat/aerobeat-input-core/tests/`
+
+**Files Created/Deleted/Modified:**
+- Pending implementation.
+
 **Status:** ⏳ Pending
 
-**Results:** Pending Derrick approval/freeze of the decisions above.
+**Results:** Execution bead created. This is the first dependency seam and blocks camera-tracking provider emission plus runner testbed consumption.
 
 ---
 
@@ -207,7 +255,7 @@ signal body_grid_pose_updated(pose: Dictionary)
 
 **Status:** ⚠️ Partial
 
-**What We Built:** Draft plan only. No implementation started.
+**What We Built:** Frozen contract plan. Implementation is ready to start as the first dependency seam.
 
 **Reference Check:** Subagent review completed against referenced input-core, input-camera-tracking, and runner files.
 
