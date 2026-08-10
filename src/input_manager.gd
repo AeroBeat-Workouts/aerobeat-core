@@ -363,17 +363,17 @@ func _connect_provider_signals(provider: AeroInputProvider) -> void:
 
 func _connect_boxing_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("straight_left"):
-		provider.straight_left.connect(func(): straight_left.emit())
+		provider.straight_left.connect(func(_power := 1.0): straight_left.emit())
 	if provider.has_signal("straight_right"):
-		provider.straight_right.connect(func(): straight_right.emit())
+		provider.straight_right.connect(func(_power := 1.0): straight_right.emit())
 	if provider.has_signal("uppercut_left"):
-		provider.uppercut_left.connect(func(): uppercut_left.emit())
+		provider.uppercut_left.connect(func(_power := 1.0): uppercut_left.emit())
 	if provider.has_signal("uppercut_right"):
-		provider.uppercut_right.connect(func(): uppercut_right.emit())
+		provider.uppercut_right.connect(func(_power := 1.0): uppercut_right.emit())
 	if provider.has_signal("hook_left"):
-		provider.hook_left.connect(func(): hook_left.emit())
+		provider.hook_left.connect(func(_power := 1.0): hook_left.emit())
 	if provider.has_signal("hook_right"):
-		provider.hook_right.connect(func(): hook_right.emit())
+		provider.hook_right.connect(func(_power := 1.0): hook_right.emit())
 	
 	if provider.has_signal("guard_enabled"):
 		provider.guard_enabled.connect(func(): guard_enabled.emit())
