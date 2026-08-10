@@ -116,6 +116,9 @@ var _active_provider: AeroInputProvider = null
 ## Provider settings cache: provider_id -> settings_dict.
 var _provider_settings: Dictionary = {}
 
+## Concrete signal connections made by this manager: provider_instance_id -> connection dictionaries.
+var _provider_signal_connections: Dictionary = {}
+
 var _body_grid_anchors: Dictionary = {
 	"nose": BodyCellInput.make_invalid_body_grid_anchor("nose"),
 	"left_wrist": BodyCellInput.make_invalid_body_grid_anchor("left_wrist"),
@@ -328,19 +331,19 @@ func any_provider_has_capability(capability: AeroInputProvider.Capability) -> bo
 # ============================================================================
 
 func _connect_provider_signals(provider: AeroInputProvider) -> void:
-	provider.started.connect(func(): started.emit())
-	provider.stopped.connect(func():
+	_connect_provider_signal(provider, "started", func(): started.emit())
+	_connect_provider_signal(provider, "stopped", func():
 		if provider == _active_provider:
 			_clear_body_grid_anchors(true)
 			_active_provider = null
 		stopped.emit()
 	)
-	provider.failed.connect(func(err): failed.emit(err))
+	_connect_provider_signal(provider, "failed", func(err): failed.emit(err))
 	
-	provider.tracking_updated.connect(
-		func(h, lh, rh, lf, rf): tracking_updated.emit(h, lh, rh, lf, rf)
+	_connect_provider_signal(provider, "tracking_updated", func(h, lh, rh, lf, rf):
+		tracking_updated.emit(h, lh, rh, lf, rf)
 	)
-	provider.camera_devices_changed.connect(func(devices, selected_device_id):
+	_connect_provider_signal(provider, "camera_devices_changed", func(devices, selected_device_id):
 		if provider == _active_provider:
 			camera_devices_changed.emit(devices, selected_device_id)
 	)
@@ -363,84 +366,84 @@ func _connect_provider_signals(provider: AeroInputProvider) -> void:
 
 func _connect_boxing_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("straight_left"):
-		provider.straight_left.connect(func(_power := 1.0): straight_left.emit())
+		_connect_provider_signal(provider, "straight_left", func(_power := 1.0): straight_left.emit())
 	if provider.has_signal("straight_right"):
-		provider.straight_right.connect(func(_power := 1.0): straight_right.emit())
+		_connect_provider_signal(provider, "straight_right", func(_power := 1.0): straight_right.emit())
 	if provider.has_signal("uppercut_left"):
-		provider.uppercut_left.connect(func(_power := 1.0): uppercut_left.emit())
+		_connect_provider_signal(provider, "uppercut_left", func(_power := 1.0): uppercut_left.emit())
 	if provider.has_signal("uppercut_right"):
-		provider.uppercut_right.connect(func(_power := 1.0): uppercut_right.emit())
+		_connect_provider_signal(provider, "uppercut_right", func(_power := 1.0): uppercut_right.emit())
 	if provider.has_signal("hook_left"):
-		provider.hook_left.connect(func(_power := 1.0): hook_left.emit())
+		_connect_provider_signal(provider, "hook_left", func(_power := 1.0): hook_left.emit())
 	if provider.has_signal("hook_right"):
-		provider.hook_right.connect(func(_power := 1.0): hook_right.emit())
+		_connect_provider_signal(provider, "hook_right", func(_power := 1.0): hook_right.emit())
 	
 	if provider.has_signal("guard_enabled"):
-		provider.guard_enabled.connect(func(): guard_enabled.emit())
+		_connect_provider_signal(provider, "guard_enabled", func(): guard_enabled.emit())
 	if provider.has_signal("guard_disabled"):
-		provider.guard_disabled.connect(func(): guard_disabled.emit())
+		_connect_provider_signal(provider, "guard_disabled", func(): guard_disabled.emit())
 	if provider.has_signal("squat_enabled"):
-		provider.squat_enabled.connect(func(): squat_enabled.emit())
+		_connect_provider_signal(provider, "squat_enabled", func(): squat_enabled.emit())
 	if provider.has_signal("squat_disabled"):
-		provider.squat_disabled.connect(func(): squat_disabled.emit())
+		_connect_provider_signal(provider, "squat_disabled", func(): squat_disabled.emit())
 	if provider.has_signal("weave_left_enabled"):
-		provider.weave_left_enabled.connect(func(): weave_left_enabled.emit())
+		_connect_provider_signal(provider, "weave_left_enabled", func(): weave_left_enabled.emit())
 	if provider.has_signal("weave_left_disabled"):
-		provider.weave_left_disabled.connect(func(): weave_left_disabled.emit())
+		_connect_provider_signal(provider, "weave_left_disabled", func(): weave_left_disabled.emit())
 	if provider.has_signal("weave_right_enabled"):
-		provider.weave_right_enabled.connect(func(): weave_right_enabled.emit())
+		_connect_provider_signal(provider, "weave_right_enabled", func(): weave_right_enabled.emit())
 	if provider.has_signal("weave_right_disabled"):
-		provider.weave_right_disabled.connect(func(): weave_right_disabled.emit())
+		_connect_provider_signal(provider, "weave_right_disabled", func(): weave_right_disabled.emit())
 
 func _connect_body_cell_signals(provider: AeroInputProvider) -> void:
 	if provider.has_signal("left_wrist_cell_entered"):
-		provider.left_wrist_cell_entered.connect(func(cell, direction):
+		_connect_provider_signal(provider, "left_wrist_cell_entered", func(cell, direction):
 			if provider == _active_provider:
 				left_wrist_cell_entered.emit(cell, direction)
 		)
 	if provider.has_signal("right_wrist_cell_entered"):
-		provider.right_wrist_cell_entered.connect(func(cell, direction):
+		_connect_provider_signal(provider, "right_wrist_cell_entered", func(cell, direction):
 			if provider == _active_provider:
 				right_wrist_cell_entered.emit(cell, direction)
 		)
 	if provider.has_signal("nose_cell_entered"):
-		provider.nose_cell_entered.connect(func(cell, direction):
+		_connect_provider_signal(provider, "nose_cell_entered", func(cell, direction):
 			if provider == _active_provider:
 				nose_cell_entered.emit(cell, direction)
 		)
 	if provider.has_signal("calibration_session_updated"):
-		provider.calibration_session_updated.connect(func(session):
+		_connect_provider_signal(provider, "calibration_session_updated", func(session):
 			if provider == _active_provider:
 				calibration_session_updated.emit(session.duplicate(true))
 		)
 	if provider.has_signal("body_grid_nose_updated"):
-		provider.body_grid_nose_updated.connect(func(anchor):
+		_connect_provider_signal(provider, "body_grid_nose_updated", func(anchor):
 			_handle_body_grid_anchor_updated(provider, "nose", anchor)
 		)
 	if provider.has_signal("body_grid_left_wrist_updated"):
-		provider.body_grid_left_wrist_updated.connect(func(anchor):
+		_connect_provider_signal(provider, "body_grid_left_wrist_updated", func(anchor):
 			_handle_body_grid_anchor_updated(provider, "left_wrist", anchor)
 		)
 	if provider.has_signal("body_grid_right_wrist_updated"):
-		provider.body_grid_right_wrist_updated.connect(func(anchor):
+		_connect_provider_signal(provider, "body_grid_right_wrist_updated", func(anchor):
 			_handle_body_grid_anchor_updated(provider, "right_wrist", anchor)
 		)
 	if provider.has_signal("body_grid_calibration_started"):
-		provider.body_grid_calibration_started.connect(func(event):
+		_connect_provider_signal(provider, "body_grid_calibration_started", func(event):
 			_handle_body_grid_calibration_event(provider, "started", event)
 			_clear_body_grid_anchors(true, false)
 		)
 	if provider.has_signal("body_grid_calibration_succeeded"):
-		provider.body_grid_calibration_succeeded.connect(func(event):
+		_connect_provider_signal(provider, "body_grid_calibration_succeeded", func(event):
 			_handle_body_grid_calibration_event(provider, "succeeded", event)
 		)
 	if provider.has_signal("body_grid_calibration_failed"):
-		provider.body_grid_calibration_failed.connect(func(event):
+		_connect_provider_signal(provider, "body_grid_calibration_failed", func(event):
 			_handle_body_grid_calibration_event(provider, "failed", event)
 			_clear_body_grid_anchors(true, false)
 		)
 	if provider.has_signal("body_grid_calibration_canceled"):
-		provider.body_grid_calibration_canceled.connect(func(event):
+		_connect_provider_signal(provider, "body_grid_calibration_canceled", func(event):
 			_handle_body_grid_calibration_event(provider, "canceled", event)
 			_clear_body_grid_anchors(true, false)
 		)
@@ -502,9 +505,33 @@ func _clear_body_grid_anchors(emit_updates: bool, reset_calibration_state: bool 
 func _disconnect_provider_signals(provider: AeroInputProvider) -> void:
 	# Godot will usually clean these up when the provider is freed, but we keep the
 	# explicit disconnect pass for predictable manager lifecycle semantics.
-	var signals := provider.get_signal_list()
-	for sig in signals:
-		provider.disconnect(sig["name"], Callable())
+	var provider_instance_id := provider.get_instance_id()
+	var connections: Array = _provider_signal_connections.get(provider_instance_id, [])
+	for connection in connections:
+		var signal_name: StringName = connection.get("signal", &"")
+		var callback: Callable = connection.get("callable", Callable())
+		if not callback.is_valid():
+			continue
+		if provider.has_signal(signal_name) and provider.is_connected(signal_name, callback):
+			provider.disconnect(signal_name, callback)
+	_provider_signal_connections.erase(provider_instance_id)
+
+func _connect_provider_signal(provider: AeroInputProvider, signal_name: StringName, callback: Callable) -> void:
+	if not provider.has_signal(signal_name):
+		return
+	if provider.is_connected(signal_name, callback):
+		return
+	var error := provider.connect(signal_name, callback)
+	if error != OK:
+		push_warning("InputManager: Failed to connect provider signal '%s' (error %d)" % [signal_name, error])
+		return
+	var provider_instance_id := provider.get_instance_id()
+	if not _provider_signal_connections.has(provider_instance_id):
+		_provider_signal_connections[provider_instance_id] = []
+	_provider_signal_connections[provider_instance_id].append({
+		"signal": signal_name,
+		"callable": callback
+	})
 
 # ============================================================================
 # PRIVATE: PRIORITY MANAGEMENT

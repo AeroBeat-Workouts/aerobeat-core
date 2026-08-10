@@ -83,6 +83,13 @@ class FakeProvider:
 	func trigger_haptic(_side: int, _intensity: float, _duration_ms: int) -> void:
 		pass
 
+class SignalRichProvider:
+	extends FakeProvider
+
+	signal straight_left(power: float)
+	signal left_wrist_cell_entered(cell: int, direction: int)
+	signal body_grid_nose_updated(anchor: Dictionary)
+
 func test_base_provider_id_defaults_to_global_name_snake_case() -> void:
 	var provider: AeroInputProvider = autofree(AeroInputProvider.new())
 	assert_eq(provider.get_provider_id(), "aero_input_provider")
@@ -119,3 +126,44 @@ func test_registry_does_not_resolve_legacy_mediapipe_provider_lookup_after_clean
 	var by_session_key := AeroProviderSessionRegistry.request_session({"session_key": "mediapipe_python/shared"})
 	assert_false(bool(by_session_key.get("ok", false)))
 	assert_eq(String(by_session_key.get("status", "")), AeroProviderSessionRegistry.STATUS_MISSING)
+
+func test_unregister_disconnects_only_manager_provider_signal_callables() -> void:
+	var manager: InputManager = add_child_autoqfree(InputManager.new())
+	manager.auto_switch_inputs = false
+	var provider: SignalRichProvider = add_child_autoqfree(SignalRichProvider.new("camera_tracking"))
+	var started_count := 0
+	var straight_count := 0
+	manager.started.connect(func(): started_count += 1)
+	manager.straight_left.connect(func(): straight_count += 1)
+
+	assert_true(manager.register_provider(provider))
+	assert_eq(_signal_connection_count(provider, "started"), 1)
+	assert_eq(_signal_connection_count(provider, "stopped"), 1)
+	assert_eq(_signal_connection_count(provider, "failed"), 1)
+	assert_eq(_signal_connection_count(provider, "tracking_updated"), 1)
+	assert_eq(_signal_connection_count(provider, "camera_devices_changed"), 1)
+	assert_eq(_signal_connection_count(provider, "straight_left"), 1)
+	assert_eq(_signal_connection_count(provider, "left_wrist_cell_entered"), 1)
+	assert_eq(_signal_connection_count(provider, "body_grid_nose_updated"), 1)
+
+	manager.unregister_provider("camera_tracking")
+
+	for signal_name in [
+		"started",
+		"stopped",
+		"failed",
+		"tracking_updated",
+		"camera_devices_changed",
+		"straight_left",
+		"left_wrist_cell_entered",
+		"body_grid_nose_updated"
+	]:
+		assert_eq(_signal_connection_count(provider, signal_name), 0, "Expected '%s' to disconnect on unregister" % signal_name)
+
+	provider.started.emit()
+	provider.straight_left.emit(1.0)
+	assert_eq(started_count, 0)
+	assert_eq(straight_count, 0)
+
+func _signal_connection_count(provider: Object, signal_name: StringName) -> int:
+	return provider.get_signal_connection_list(signal_name).size()
